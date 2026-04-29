@@ -1,24 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthController } from './auth/interfaces/auth.controller';
-import { AuthService } from './auth/application/auth.service';
-import { UserEntity } from './auth/infrastructure/user.entity';
+import { AuthModule } from './auth/auth.module';
+import { SupplierModule } from './supplier/supplier.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '15m' },
-      }),
-    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -33,9 +23,10 @@ import { UserEntity } from './auth/infrastructure/user.entity';
         synchronize: true,
       }),
     }),
-    TypeOrmModule.forFeature([UserEntity]),
+    AuthModule,
+    SupplierModule,
   ],
-  controllers: [AppController, AuthController],
-  providers: [AppService, AuthService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

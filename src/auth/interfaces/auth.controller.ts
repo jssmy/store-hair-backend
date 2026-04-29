@@ -1,5 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../application/auth.service';
+import { RegisterDto } from '../application/register.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -13,5 +14,21 @@ export class AuthController {
       throw new UnauthorizedException('Credenciales inválidas');
     }
     return this.authService.login(user);
+  }
+
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() body: RegisterDto) {
+    return this.authService.register(body);
+  }
+
+  @Get('default')
+  async defaultUser() {
+    return this.authService.register({
+      email: 'example@gmail.com',
+      password: '123456',
+      name: 'John Doe',
+    });
   }
 }

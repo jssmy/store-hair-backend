@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
@@ -6,6 +6,8 @@ import * as bcrypt from 'bcrypt';
 import { AuthUser } from '../domain/auth-user.entity';
 import { IAuthServicePort } from '../domain/auth-service.port';
 import { UserEntity } from '../infrastructure/user.entity';
+import { RegisterDto } from './register.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService implements IAuthServicePort {
@@ -13,6 +15,7 @@ export class AuthService implements IAuthServicePort {
     private readonly jwtService: JwtService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    private readonly configService: ConfigService,
   ) {}
 
   async validateUser(identifier: string, password: string): Promise<AuthUser | null> {
@@ -25,16 +28,28 @@ export class AuthService implements IAuthServicePort {
     return new AuthUser(user.id, user.email, user.name);
   }
 
+
   login(user: AuthUser): Promise<{
     access_token: string;
     refresh_token: string;
-    user: AuthUser;
   }> {
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, fullname: user.name, email: user.email };
+    const secret = this.configService.get<string>('JWT_SECRET');
     return Promise.resolve({
-      access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
-      user,
+      access_token: this.jwtService.sign(payload, { expiresIn: '15m', secret }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d', secret }),
     });
+  }
+
+  async register(dto: RegisterDto): Promise<{ access_token: string; refresh_token: string; }> {
+    const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('El email ya está registrado');
+
+    const hashed = await bcrypt.hash(dto.password, 10);
+    const saved = await this.userRepository.save(
+      this.userRepository.create({ email: dto.email, name: dto.name, password: hashed }),
+    );
+
+    return this.login(new AuthUser(saved.id, saved.email, saved.name));
   }
 }
