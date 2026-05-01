@@ -13,7 +13,7 @@ import { SupplierModule } from './supplier/supplier.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',
+        type: config.get<string>('DB_DRIVER') as any,
         host: config.get<string>('DB_HOST'),
         port: config.get<number>('DB_PORT'),
         username: config.get<string>('DB_USERNAME'),
