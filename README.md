@@ -1,98 +1,96 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Store Hair CRM — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST para el CRM de gestión de tienda de peluquería. Construida con NestJS 11, TypeORM y autenticación JWT.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- **Runtime:** Node.js 24
+- **Framework:** NestJS 11
+- **ORM:** TypeORM 0.3
+- **Base de datos:** PostgreSQL / MySQL (configurable via `DB_DRIVER`)
+- **Auth:** JWT + Passport
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Módulos
 
-## Project setup
+| Módulo | Ruta base | Descripción |
+|---|---|---|
+| Auth | `/auth` | Registro, login y usuario por defecto |
+| Supplier | `/supplier` | CRUD de proveedores (requiere JWT) |
 
-```bash
-$ npm install
-```
+### Endpoints Auth
 
-## Compile and run the project
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| POST | `/auth/login` | No | Login, retorna JWT |
+| POST | `/auth/register` | No | Registro de usuario |
+| GET | `/auth/default` | No | Crea usuario de prueba |
 
-```bash
-# development
-$ npm run start
+### Endpoints Supplier
 
-# watch mode
-$ npm run start:dev
+> Todos requieren header `Authorization: Bearer <token>`
 
-# production mode
-$ npm run start:prod
-```
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/supplier` | Crear proveedor |
+| GET | `/supplier` | Listar todos |
+| GET | `/supplier/:id` | Obtener por ID |
+| PATCH | `/supplier/:id` | Actualizar |
+| DELETE | `/supplier/:id` | Eliminar |
 
-## Run tests
+## Variables de entorno
+
+Copia `env.example` a `.env` y completa los valores:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp env.example .env
 ```
 
-## Deployment
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `DB_DRIVER` | Motor de base de datos | `postgres` o `mysql` |
+| `DB_HOST` | Host de la base de datos | `localhost` |
+| `DB_PORT` | Puerto | `5432` |
+| `DB_USERNAME` | Usuario | `pos_user` |
+| `DB_PASSWORD` | Contraseña | `123456` |
+| `DB_NAME` | Nombre de la base de datos | `crm_db` |
+| `JWT_SECRET` | Secreto para firmar tokens | `change_me_in_production` |
+| `PORT` | Puerto del servidor (opcional) | `3000` |
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Instalación y desarrollo
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Instalar dependencias
+npm install
+
+# Desarrollo con hot reload
+npm run start:dev
+
+# Producción
+npm run build
+npm run start:prod
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Docker
 
-## Resources
+```bash
+# Levantar con docker compose (lee el .env automáticamente)
+docker compose up --build
 
-Check out a few resources that may come in handy when working with NestJS:
+# Detener
+docker compose down
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+El contenedor se llama `store-hair-back-crm` y expone el puerto `3000`.
 
-## Support
+## Tests
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+# Unit tests
+npm run test
 
-## Stay in touch
+# E2E tests
+npm run test:e2e
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Cobertura
+npm run test:cov
+```
