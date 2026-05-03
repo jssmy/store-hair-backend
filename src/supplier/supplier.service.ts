@@ -31,11 +31,16 @@ export class SupplierService {
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.supplierRepository.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    const queryBuilder = this.supplierRepository.createQueryBuilder('supplier')
+    .leftJoinAndSelect('supplier.user', 'user')
+    .addSelect(['user.id', 'user.name'])
+    .orderBy('supplier.createdAt', 'DESC')
+    .skip(skip)
+    .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
 
     return {
       data,
@@ -43,7 +48,7 @@ export class SupplierService {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages,
       },
     };
   }

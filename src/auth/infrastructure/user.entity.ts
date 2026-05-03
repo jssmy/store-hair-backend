@@ -1,6 +1,8 @@
 import { Lote } from 'src/lote/entities/lote.entity';
 import { Product } from 'src/product/entities/product.entity';
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { PurchaseOrder } from 'src/purchase-order/entities/purchase-order.entity';
+import { Supplier } from 'src/supplier/entities/supplier.entity';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
 export class UserEntity {
@@ -22,6 +24,12 @@ export class UserEntity {
 
   @OneToMany(() => Lote, (lote) => lote.user)
   lotes!: Lote[];
+
+  @OneToMany(() => Supplier, (supplier) => supplier.user)
+  suppliers!: Supplier[];
+
+  @OneToMany(() => PurchaseOrder, (purchaseOrder) => purchaseOrder.user)
+  purchaseOrders!: PurchaseOrder[];
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt!: Date;

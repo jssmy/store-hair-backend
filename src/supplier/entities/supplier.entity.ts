@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { UserEntity } from "src/auth/infrastructure/user.entity";
+import { PurchaseOrder } from "src/purchase-order/entities/purchase-order.entity";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('suppliers')
 export class Supplier {
@@ -22,6 +24,12 @@ export class Supplier {
 
     @Column({ default: true })
     active!: boolean;
+
+    @ManyToOne(() => UserEntity, (user) => user.suppliers)
+    user!: UserEntity;
+
+    @OneToMany(() => PurchaseOrder, (purchaseOrder) => purchaseOrder.supplier)
+    purchaseOrders!: PurchaseOrder[];
 
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     createdAt!: Date;

@@ -14,9 +14,6 @@ export class Lote {
     @ManyToOne(() => UserEntity, (user) => user.lotes)
     user!: UserEntity;
 
-    @Column({ type: 'enum', enum: LoteStatus, default: LoteStatus.PENDING })
-    status!: LoteStatus;
-
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     createdAt!: Date;
 

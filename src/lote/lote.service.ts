@@ -28,10 +28,6 @@ export class LoteService {
     private readonly dataSource: DataSource,
     @InjectRepository(Lote)
     private readonly loteRepository: Repository<Lote>,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>,
   ) { }
 
   async create(
@@ -96,10 +92,6 @@ export class LoteService {
       .skip(skip)
       .take(limit);
 
-    if (query.status) {
-      queryBuilder.andWhere('lote.status = :status', { status: query.status });
-    }
-
     if (query.userId) {
       queryBuilder.andWhere('user.id = :userId', { userId: query.userId });
     }
@@ -132,18 +124,12 @@ export class LoteService {
       throw new NotFoundException(`Lote con ID ${id} no encontrado`);
     }
 
-    if (lote.status === LoteStatus.CANCELED || lote.status === LoteStatus.COMPLETED) {
-      throw new BadRequestException(
-        `No se permite actualizar un lote con estado ${lote.status}`,
-      );
-    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const loteRepository = queryRunner.manager.getRepository(Lote);
       const productRepository = queryRunner.manager.getRepository(Product);
 
       const noProducts = !updateLoteDto.products || updateLoteDto.products.length === 0;
@@ -153,7 +139,6 @@ export class LoteService {
         if (existingProducts.length > 0) {
           await productRepository.remove(existingProducts);
         }
-        await loteRepository.update(id, { status: LoteStatus.CANCELED });
       } else {
         const incomingProducts = updateLoteDto.products!;
         const existingProducts = lote.products ?? [];

@@ -35,8 +35,8 @@ export class Product {
     @Column({ type: 'decimal', precision: 10, scale: 2 })
     weight!: number;
 
-    @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.PENDING })
-    status!: ProductStatus;
+    @Column({ default: true })
+    active!: boolean;
 
     @Column({ type: 'json', nullable: true })
     imageUrls!: string[];

@@ -3,10 +3,7 @@ import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 import { LoteStatus } from '../enums/lote-status.enum';
 
 export class FindAllLoteQueryDto {
-  @IsOptional()
-  @IsEnum(LoteStatus)
-  status?: LoteStatus;
-
+  
   @IsOptional()
   @IsUUID()
   userId?: string;

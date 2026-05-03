@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { ProductModule } from './product/product.module';
 import { LoteModule } from './lote/lote.module';
+import { PurchaseOrderModule } from './purchase-order/purchase-order.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { LoteModule } from './lote/lote.module';
     SupplierModule,
     ProductModule,
     LoteModule,
+    PurchaseOrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
