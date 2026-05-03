@@ -7,6 +7,7 @@ import { AuthController } from './interfaces/auth.controller';
 import { AuthService } from './application/auth.service';
 import { UserEntity } from './infrastructure/user.entity';
 import { JwtStrategy } from './infrastructure/jwt.strategy';
+import { JwtRefreshStrategy } from './infrastructure/jwt-refresh.strategy';
 
 @Module({
   imports: [
@@ -16,13 +17,12 @@ import { JwtStrategy } from './infrastructure/jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '15m' },
       }),
     }),
     TypeOrmModule.forFeature([UserEntity]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [JwtStrategy, PassportModule],
+  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  exports: [JwtStrategy, JwtRefreshStrategy, PassportModule, TypeOrmModule],
 })
 export class AuthModule {}

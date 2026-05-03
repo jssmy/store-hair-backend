@@ -34,11 +34,10 @@ export class AuthService implements IAuthServicePort {
     refresh_token: string;
   }> {
     const payload = { sub: user.id, fullname: user.name, email: user.email };
-    const secret = this.configService.get<string>('JWT_SECRET');
     return Promise.resolve({
-      access_token: this.jwtService.sign(payload, { expiresIn: '15m', secret }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d', secret }),
-    });
+      access_token: this.jwtService.sign(payload, { expiresIn: '15m', }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '7h', }),
+    })
   }
 
   async register(dto: RegisterDto): Promise<{ access_token: string; refresh_token: string; }> {

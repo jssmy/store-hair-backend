@@ -5,10 +5,10 @@ export class CreateSupplierDto {
     @MinLength(4)
     name: string;
 
-    @IsNumber()
+    @IsString()
     @MinLength(8)
     @MaxLength(12)
-    dni: number;
+    dni: string;
 
     @IsString()
     @MinLength(7)

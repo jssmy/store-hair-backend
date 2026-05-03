@@ -4,6 +4,7 @@ import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { Repository } from 'typeorm';
 import { Supplier } from './entities/supplier.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FindAllSupplierQueryDto } from 'src/supplier/dto/find-all-supplier-query.dto';
 
 @Injectable()
 export class SupplierService {
@@ -25,8 +26,26 @@ export class SupplierService {
     return this.supplierRepository.save(supplier);
   }
 
-  findAll() {
-    return this.supplierRepository.find();
+  async findAll(query: FindAllSupplierQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.supplierRepository.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   findOne(id: number) {

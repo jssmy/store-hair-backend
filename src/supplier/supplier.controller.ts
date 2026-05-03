@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { SupplierService } from './supplier.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { JwtAuthGuard } from '../auth/infrastructure/jwt-auth.guard';
+import { FindAllSupplierQueryDto } from 'src/supplier/dto/find-all-supplier-query.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('supplier')
@@ -15,8 +16,8 @@ export class SupplierController {
   }
 
   @Get()
-  findAll() {
-    return this.supplierService.findAll();
+  findAll(@Query() query: FindAllSupplierQueryDto) {
+    return this.supplierService.findAll(query);
   }
 
   @Get(':id')
