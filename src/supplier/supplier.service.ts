@@ -86,6 +86,14 @@ export class SupplierService {
     .skip(skip)
     .take(limit);
 
+    if (query.type !== undefined) {
+      queryBuilder.andWhere('supplier.type = :type', { type: query.type });
+    }
+
+    if (query.active !== undefined) {
+      queryBuilder.andWhere('supplier.active = :active', { active: query.active });
+    }
+
     const [data, total] = await queryBuilder.getManyAndCount();
 
     const totalPages = Math.ceil(total / limit);
