@@ -1,6 +1,7 @@
 import { UserEntity } from "src/auth/infrastructure/user.entity";
+import { Country } from "src/country/entities/country.entity";
 import { PurchaseOrder } from "src/purchase-order/entities/purchase-order.entity";
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { SupplierType } from "../enums/supplier-type.enum";
 
 @Entity('suppliers')
@@ -40,6 +41,13 @@ export class Supplier {
 
     @Column({ default: true })
     active!: boolean;
+
+    @Column({ type: 'varchar', length: 3, default: 'PE' })
+    countryId!: string;
+
+    @ManyToOne(() => Country, (country) => country.suppliers, { createForeignKeyConstraints: false })
+    @JoinColumn({ name: 'countryId' })
+    country!: Country;
 
     @ManyToOne(() => UserEntity, (user) => user.suppliers)
     user!: UserEntity;

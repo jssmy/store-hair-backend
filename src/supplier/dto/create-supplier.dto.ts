@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, IsUppercase, Length, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { SupplierType } from '../enums/supplier-type.enum';
+
 
 export class CreateSupplierDto {
   @ApiProperty({ enum: SupplierType, example: SupplierType.NATURAL, description: 'Tipo de proveedor: NATURAL (persona natural) o JURIDICA (empresa)' })
@@ -71,4 +72,11 @@ export class CreateSupplierDto {
   @IsBoolean()
   @IsOptional()
   active?: boolean;
+
+  @ApiProperty({ example: 'PE', description: 'Código ISO del país (2-3 letras mayúsculas).', required: false, minLength: 2, maxLength: 3 })
+  @IsString()
+  @IsUppercase()
+  @Length(2, 3)
+  @IsOptional()
+  countryId?: string;
 }
