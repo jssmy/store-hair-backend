@@ -32,4 +32,14 @@ export class PurchaseOrder {
 
     @UpdateDateColumn()
     updatedAt!: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    completedAt!: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    canceledAt!: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    approvedAt!: Date;
+
 }

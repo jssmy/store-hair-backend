@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { AuthUser } from '../auth/domain/auth-user.entity';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { FindAllPurchaseOrderQueryDto } from './dto/find-all-purchase-order-query.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
+import { UpdatePurchaseOrderStatusDto } from './dto/update-purchase-order-status.dto';
 import { PurchaseOrder } from './entities/purchase-order.entity';
 import { PurchaseOrderDetail } from './entities/purchase-order-detail.entity';
+import { PurchaseOrderStatus } from './enums/purchase-order-status.enum';
 
 @Injectable()
 export class PurchaseOrderService {
@@ -180,6 +182,32 @@ export class PurchaseOrderService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async updateStatus(id: number, dto: UpdatePurchaseOrderStatusDto) {
+    const purchaseOrder = await this.purchaseOrderRepository.findOne({ where: { id } });
+
+    if (!purchaseOrder) {
+      throw new NotFoundException(`Orden de compra con ID ${id} no encontrada`);
+    }
+
+    if (purchaseOrder.status !== PurchaseOrderStatus.PENDING) {
+      throw new BadRequestException(
+        `No se puede cambiar el estado de una orden en estado '${purchaseOrder.status}'. Solo se permite actualizar órdenes en estado 'pending'.`,
+      );
+    }
+
+    purchaseOrder.status = dto.status;
+
+    if (dto.status === PurchaseOrderStatus.APPROVED) {
+      purchaseOrder.approvedAt = new Date();
+    } else if (dto.status === PurchaseOrderStatus.CANCELED) {
+      purchaseOrder.canceledAt = new Date();
+    } else if (dto.status === PurchaseOrderStatus.COMPLETED) {
+      purchaseOrder.completedAt = new Date();
+    }
+
+    return this.purchaseOrderRepository.save(purchaseOrder);
   }
 
   async remove(id: number) {
