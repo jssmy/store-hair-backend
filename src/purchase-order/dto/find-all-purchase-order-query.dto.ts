@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { PurchaseOrderStatus } from '../enums/purchase-order-status.enum';
 
 export class FindAllPurchaseOrderQueryDto {
   @ApiProperty({ example: 1, description: 'Número de página', required: false, default: 1, minimum: 1 })
@@ -18,6 +19,8 @@ export class FindAllPurchaseOrderQueryDto {
   @Max(100)
   limit?: number = 10;
 
+  
+
   @ApiProperty({ example: 1, description: 'Filtrar por ID de proveedor', required: false, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -29,4 +32,14 @@ export class FindAllPurchaseOrderQueryDto {
   @IsOptional()
   @IsUUID()
   userId?: string;
+
+  @ApiProperty({ example: PurchaseOrderStatus.PENDING, description: 'Filtrar por estado de la orden', required: false, enum: PurchaseOrderStatus })
+  @IsOptional()
+  @IsEnum(PurchaseOrderStatus)
+  status?: PurchaseOrderStatus;
+
+  @ApiProperty({ example: 'OC-2025-10', description: 'Buscar por número de OC o nombre del proveedor', required: false })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

@@ -104,6 +104,21 @@ export class PurchaseOrderService {
       });
     }
 
+    if (query.status) {
+      queryBuilder.andWhere('purchaseOrder.status = :status', {
+        status: query.status,
+      });
+    }
+
+    if (query.search) {
+      queryBuilder.andWhere(
+        `(CONCAT('OC-', EXTRACT(YEAR FROM purchaseOrder.createdAt), '-', CAST(purchaseOrder.id AS VARCHAR)) ILIKE :search
+          OR supplier.fullName ILIKE :search
+          OR supplier.businessName ILIKE :search)`,
+        { search: `%${query.search}%` },
+      );
+    }
+
     const [data, total] = await queryBuilder.getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
