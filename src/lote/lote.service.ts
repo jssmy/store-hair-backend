@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
-import { Brackets, DataSource, Repository } from 'typeorm';
+import { Brackets, DataSource, In, Repository } from 'typeorm';
 import { Lote } from './entities/lote.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/infrastructure/user.entity';
@@ -243,7 +243,7 @@ export class LoteService {
   }
 
   async updateStatus(id: string, status: LoteStatus) {
-    const lote = await this.loteRepository.findOne({ where: { id } });
+    const lote = await this.loteRepository.findOne({ where: { id }, relations: ['products'] });
 
     if (!lote) {
       throw new NotFoundException(`Lote con ID ${id} no encontrado`);
@@ -253,9 +253,29 @@ export class LoteService {
       throw new BadRequestException(`No se puede actualizar el estado de un lote completado`);
     }
 
-    await this.loteRepository.update(id, { status });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    return this.loteRepository.findOne({ where: { id } });
+    try {
+      const loteRepository = queryRunner.manager.getRepository(Lote);
+      await loteRepository.update(id, { status });
+
+      if (status === LoteStatus.COMPLETED && lote.products?.length) {
+        const productIds = lote.products.map((p) => p.id);
+        const productRepository = queryRunner.manager.getRepository(Product);
+        await productRepository.update({ id: In(productIds) }, { active: true });
+      }
+
+      await queryRunner.commitTransaction();
+
+      return this.loteRepository.findOne({ where: { id }, relations: ['products'] });
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async remove(id: string) {
