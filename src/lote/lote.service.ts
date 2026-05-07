@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
-import { DataSource, Repository } from 'typeorm';
+import { Brackets, DataSource, Repository } from 'typeorm';
 import { Lote } from './entities/lote.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/infrastructure/user.entity';
@@ -109,6 +109,7 @@ export class LoteService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
+    const search = query.search?.trim();
 
     const queryBuilder = this.loteRepository
       .createQueryBuilder('lote')
@@ -123,6 +124,23 @@ export class LoteService {
 
     if (query.userId) {
       queryBuilder.andWhere('user.id = :userId', { userId: query.userId });
+    }
+
+    if (query.status) {
+      queryBuilder.andWhere('lote.status = :status', { status: query.status });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('CAST(lote.id AS TEXT) ILIKE :search', { search: `%${search}%` })
+            .orWhere('CAST(purchaseOrder.id AS TEXT) ILIKE :search', { search: `%${search}%` })
+            .orWhere('product.name ILIKE :search', { search: `%${search}%` })
+            .orWhere('product.type ILIKE :search', { search: `%${search}%` })
+            .orWhere('product.color ILIKE :search', { search: `%${search}%` })
+            .orWhere('user.name ILIKE :search', { search: `%${search}%` });
+        }),
+      );
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
