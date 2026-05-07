@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@ne
 import { LoteService } from './lote.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
+import { UpdateLoteStatusDto } from './dto/update-lote-status.dto';
 import { AuthUser } from 'src/auth/domain/auth-user.entity';
 import { CurrentUser } from 'src/auth/infrastructure/current-user.decorator';
 import { JwtAuthGuard } from 'src/auth/infrastructure/jwt-auth.guard';
@@ -43,6 +44,17 @@ export class LoteController {
   @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
   findOne(@Param('id') id: string) {
     return this.loteService.findOne(id);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Actualizar estado del lote', description: 'Actualiza el estado de un lote. No se permite si el lote ya está completado.' })
+  @ApiParam({ name: 'id', description: 'UUID del lote', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado exitosamente.' })
+  @ApiResponse({ status: 400, description: 'No se puede actualizar el estado de un lote completado.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
+  updateStatus(@Param('id') id: string, @Body() updateLoteStatusDto: UpdateLoteStatusDto) {
+    return this.loteService.updateStatus(id, updateLoteStatusDto.status);
   }
 
   @Patch(':id')

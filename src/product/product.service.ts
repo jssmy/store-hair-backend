@@ -24,11 +24,11 @@ export class ProductService {
     return this.productRepository.find();
   }
 
-  findOne(id: string) {
+  findOne(id: number) {
     return this.productRepository.findOneBy({ id });
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
+  async update(id: number, updateProductDto: UpdateProductDto) {
 
     const product = await this.findOne(id);
 
@@ -40,7 +40,7 @@ export class ProductService {
     return this.productRepository.update(id, updateProductDto);
   }
 
-  async remove(id: string) {
+  async remove(id: number) {
     const product = await this.findOne(id);
 
     if (!product) {

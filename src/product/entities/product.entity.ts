@@ -1,4 +1,4 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne, PrimaryGeneratedColumn, VirtualColumn } from "typeorm";
 import { ProductStatus } from "../enums/product-status.enum";
 import { UserEntity } from "src/auth/infrastructure/user.entity";
 import { Lote } from "src/lote/entities/lote.entity";
@@ -6,8 +6,15 @@ import { Lote } from "src/lote/entities/lote.entity";
 
 @Entity('products')
 export class Product {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    @PrimaryGeneratedColumn()
+    id!: number;
+
+    @VirtualColumn({
+            query: (alias) =>
+                `CONCAT('PO-', EXTRACT(YEAR FROM ${alias}."createdAt"), '-', ${alias}.id)`
+        })
+        po!: string;
+    
 
 
     @BeforeInsert()
@@ -35,7 +42,7 @@ export class Product {
     @Column({ type: 'decimal', precision: 10, scale: 2 })
     weight!: number;
 
-    @Column({ default: true })
+    @Column({ default: false })
     active!: boolean;
 
     @Column({ type: 'json', nullable: true })

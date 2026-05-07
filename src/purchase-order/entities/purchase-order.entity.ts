@@ -1,8 +1,9 @@
 import { UserEntity } from "src/auth/infrastructure/user.entity";
 import { Supplier } from "src/supplier/entities/supplier.entity";
-import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn, VirtualColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn, VirtualColumn } from "typeorm";
 import { PurchaseOrderDetail } from "./purchase-order-detail.entity";
 import { PurchaseOrderStatus } from "../enums/purchase-order-status.enum";
+import { Lote } from "src/lote/entities/lote.entity";
 
 @Entity('purchase_orders')
 export class PurchaseOrder {
@@ -26,6 +27,9 @@ export class PurchaseOrder {
             `CONCAT('OC-', EXTRACT(YEAR FROM ${alias}."createdAt"), '-', ${alias}.id)`
     })
     oc!: string;
+
+    @OneToOne(() => Lote, (lote) => lote.purchaseOrder)
+    lote!: Lote;
 
     @CreateDateColumn()
     createdAt!: Date;

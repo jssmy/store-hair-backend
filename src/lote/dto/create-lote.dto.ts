@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsNumber, IsPositive, ValidateNested } from 'class-validator';
 import { CreateProductDto } from 'src/product/dto/create-product.dto';
 
 export class CreateLoteDto {
@@ -14,4 +14,9 @@ export class CreateLoteDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductDto)
   products!: CreateProductDto[];
+
+  @IsNumber()
+  @IsPositive()
+  @ApiProperty({ example: 1, description: 'ID de la orden de compra asociada al lote' })
+  purchaseOrderId!: number;
 }

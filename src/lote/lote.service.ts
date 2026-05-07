@@ -11,6 +11,8 @@ import { Product } from 'src/product/entities/product.entity';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { FindAllLoteQueryDto } from './dto/find-all-lote-query.dto';
+import { PurchaseOrder } from 'src/purchase-order/entities/purchase-order.entity';
+import { PurchaseOrderStatus } from 'src/purchase-order/enums/purchase-order-status.enum';
 
 const BASE64_IMAGE_REGEX = /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/]+=*)$/;
 const HTTP_IMAGE_URL_REGEX = /^https?:\/\/\S+$/i;
@@ -28,12 +30,15 @@ export class LoteService {
     private readonly dataSource: DataSource,
     @InjectRepository(Lote)
     private readonly loteRepository: Repository<Lote>,
+
   ) { }
 
   async create(
     createLoteDto: CreateLoteDto,
     authUser: AuthUser,
   ) {
+
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -41,14 +46,36 @@ export class LoteService {
     try {
       const loteRepository = queryRunner.manager.getRepository(Lote);
       const productRepository = queryRunner.manager.getRepository(Product);
-      const userRepository = queryRunner.manager.getRepository(UserEntity);
+      const purchaseOrderRepository = queryRunner.manager.getRepository(PurchaseOrder);
 
-      const user = userRepository.create(authUser);
+      const purchaseOrder = await purchaseOrderRepository.findOne({ where: { id: createLoteDto.purchaseOrderId } });
+
+      if (!purchaseOrder) {
+        throw new NotFoundException(`Orden de compra con ID ${createLoteDto.purchaseOrderId} no encontrada`);
+      }
+
+      if (purchaseOrder.status !== PurchaseOrderStatus.APPROVED) {
+        throw new BadRequestException(`La orden de compra con ID ${createLoteDto.purchaseOrderId} no está aprobada`);
+      }
+
+      const existingLote = await loteRepository.findOne({
+        where: { purchaseOrder: { id: createLoteDto.purchaseOrderId } },
+      });
+
+      if (existingLote) {
+        throw new BadRequestException(
+          `La orden de compra con ID ${createLoteDto.purchaseOrderId} ya está asociada al lote ${existingLote.id}`,
+        );
+      }
+
+      const user = { id: authUser.id } as UserEntity;
 
       // 1. Guardar el lote vacío primero para obtener su ID
       const lote = await loteRepository.save(
-        loteRepository.create({ user }),
+        loteRepository.create({ user, purchaseOrder }),
       );
+
+      await purchaseOrderRepository.update(purchaseOrder.id, { status: PurchaseOrderStatus.COMPLETED });
 
       // 2. Crear cada producto con sus imágenes y asociarlo al lote/usuario
       const products = await Promise.all(
@@ -83,11 +110,13 @@ export class LoteService {
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    const queryBuilder = this.loteRepository 
+    const queryBuilder = this.loteRepository
       .createQueryBuilder('lote')
       .leftJoinAndSelect('lote.products', 'product')
+      .leftJoinAndSelect('lote.purchaseOrder', 'purchaseOrder')
       .leftJoin('lote.user', 'user')
       .addSelect(['user.id', 'user.name'])
+      .loadRelationIdAndMap('lote.purchaseOrderId', 'lote.purchaseOrder')
       .orderBy('lote.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -111,7 +140,7 @@ export class LoteService {
   }
 
   findOne(id: string) {
-    return this.loteRepository.findOne({ where: { id }, relations: ['products'] });
+    return this.loteRepository.findOne({ where: { id }, relations: ['products',] });
   }
 
   async update(id: string, updateLoteDto: UpdateLoteDto) {
@@ -193,6 +222,22 @@ export class LoteService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async updateStatus(id: string, status: LoteStatus) {
+    const lote = await this.loteRepository.findOne({ where: { id } });
+
+    if (!lote) {
+      throw new NotFoundException(`Lote con ID ${id} no encontrado`);
+    }
+
+    if (lote.status === LoteStatus.COMPLETED) {
+      throw new BadRequestException(`No se puede actualizar el estado de un lote completado`);
+    }
+
+    await this.loteRepository.update(id, { status });
+
+    return this.loteRepository.findOne({ where: { id } });
   }
 
   async remove(id: string) {

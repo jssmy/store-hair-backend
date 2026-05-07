@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -32,29 +32,29 @@ export class ProductController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener producto por ID', description: 'Retorna un producto específico por su UUID.' })
-  @ApiParam({ name: 'id', description: 'UUID del producto', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiOperation({ summary: 'Obtener producto por ID', description: 'Retorna un producto específico por su ID numérico.' })
+  @ApiParam({ name: 'id', description: 'ID numérico del producto', example: 1 })
   @ApiResponse({ status: 200, description: 'Producto encontrado.' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar producto', description: 'Actualiza los campos de un producto existente.' })
-  @ApiParam({ name: 'id', description: 'UUID del producto', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiParam({ name: 'id', description: 'ID numérico del producto', example: 1 })
   @ApiResponse({ status: 200, description: 'Producto actualizado exitosamente.' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateProductDto: UpdateProductDto) {
     return this.productService.update(id, updateProductDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar producto', description: 'Elimina un producto por su UUID.' })
-  @ApiParam({ name: 'id', description: 'UUID del producto', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiOperation({ summary: 'Eliminar producto', description: 'Elimina un producto por su ID numérico.' })
+  @ApiParam({ name: 'id', description: 'ID numérico del producto', example: 1 })
   @ApiResponse({ status: 200, description: 'Producto eliminado exitosamente.' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.productService.remove(id);
   }
 }

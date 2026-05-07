@@ -1,14 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsOptional, IsUUID, ValidateNested } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsOptional, Min, ValidateNested } from 'class-validator';
 import { UpdateProductDto } from 'src/product/dto/update-product.dto';
 import { LoteStatus } from '../enums/lote-status.enum';
 
 export class UpdateLoteProductDto extends UpdateProductDto {
-  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', description: 'UUID del producto a actualizar', required: false })
+  @ApiProperty({ example: 1, description: 'ID numérico del producto a actualizar', required: false })
   @IsOptional()
-  @IsUUID()
-  id?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  id?: number;
 }
 
 export class UpdateLoteDto {

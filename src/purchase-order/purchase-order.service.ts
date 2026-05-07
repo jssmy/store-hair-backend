@@ -164,7 +164,28 @@ export class PurchaseOrderService {
       const purchaseOrderRepository = queryRunner.manager.getRepository(PurchaseOrder);
       const purchaseOrderDetailRepository = queryRunner.manager.getRepository(PurchaseOrderDetail);
 
-      await purchaseOrderRepository.save(purchaseOrder);
+      if (
+        updatePurchaseOrderDto.supplierId !== undefined
+        && updatePurchaseOrderDto.supplierId !== purchaseOrder.supplier?.id
+      ) {
+        const supplier = await queryRunner.manager
+          .createQueryBuilder()
+          .select('supplier.id', 'id')
+          .from('suppliers', 'supplier')
+          .where('supplier.id = :supplierId', {
+            supplierId: updatePurchaseOrderDto.supplierId,
+          })
+          .getRawOne<{ id: number }>();
+
+        if (!supplier) {
+          throw new NotFoundException(
+            `Proveedor con ID ${updatePurchaseOrderDto.supplierId} no encontrado`,
+          );
+        }
+
+        purchaseOrder.supplier = { id: supplier.id } as PurchaseOrder['supplier'];
+        await purchaseOrderRepository.save(purchaseOrder);
+      }
 
       if (updatePurchaseOrderDto.details !== undefined) {
         const existingDetails = purchaseOrder.details ?? [];
