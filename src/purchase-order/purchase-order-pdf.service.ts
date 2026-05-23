@@ -5,14 +5,8 @@ import PDFDocument = require('pdfkit');
 import { PurchaseOrder } from './entities/purchase-order.entity';
 import { PurchaseOrderDetail } from './entities/purchase-order-detail.entity';
 import { PurchaseOrderStatus } from './enums/purchase-order-status.enum';
-
-const COMPANY = {
-  name: 'Store Hair',
-  ruc: '20000000001',
-  address: 'Av. Principal 123, Lima, Perú',
-  phone: '+51 1 234-5678',
-  email: 'contacto@storehair.pe',
-};
+import { AppSettingsService } from 'src/app-settings/app-settings.service';
+import { AppSettings } from 'src/app-settings/entities/app-settings.entity';
 
 const STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
   [PurchaseOrderStatus.PENDING]: 'Pendiente',
@@ -35,22 +29,26 @@ export class PurchaseOrderPdfService {
   constructor(
     @InjectRepository(PurchaseOrder)
     private readonly purchaseOrderRepository: Repository<PurchaseOrder>,
+    private readonly appSettingsService: AppSettingsService,
   ) {}
 
   async generatePdf(id: number): Promise<Buffer> {
-    const order = await this.purchaseOrderRepository.findOne({
-      where: { id },
-      relations: ['supplier', 'supplier.country', 'details', 'user'],
-    });
+    const [order, settings] = await Promise.all([
+      this.purchaseOrderRepository.findOne({
+        where: { id },
+        relations: ['supplier', 'supplier.country', 'details', 'user'],
+      }),
+      this.appSettingsService.get(),
+    ]);
 
     if (!order) {
       throw new NotFoundException(`Orden de compra con ID ${id} no encontrada`);
     }
 
-    return this.buildPdf(order);
+    return this.buildPdf(order, settings);
   }
 
-  private buildPdf(order: PurchaseOrder): Promise<Buffer> {
+  private buildPdf(order: PurchaseOrder, settings: AppSettings): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
       const chunks: Buffer[] = [];
@@ -59,11 +57,11 @@ export class PurchaseOrderPdfService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      this.drawHeader(doc);
+      this.drawHeader(doc, settings);
       this.drawOrderMeta(doc, order);
       this.drawSupplierInfo(doc, order);
       this.drawDetailsTable(doc, order.details ?? []);
-      this.drawFooter(doc, order);
+      this.drawFooter(doc, order, settings);
 
       doc.end();
     });
@@ -71,7 +69,7 @@ export class PurchaseOrderPdfService {
 
   // ─── Secciones ───────────────────────────────────────────────────────────────
 
-  private drawHeader(doc: PDFKit.PDFDocument) {
+  private drawHeader(doc: PDFKit.PDFDocument, settings: AppSettings) {
     // Barra superior
     doc.rect(50, 45, doc.page.width - 100, 70).fill(COLORS.primary);
 
@@ -79,13 +77,13 @@ export class PurchaseOrderPdfService {
       .fillColor('#ffffff')
       .fontSize(22)
       .font('Helvetica-Bold')
-      .text(COMPANY.name, 70, 65, { continued: false });
+      .text(settings.companyName, 70, 65, { continued: false });
 
     doc
       .fontSize(9)
       .font('Helvetica')
-      .text(COMPANY.address, 70, 92)
-      .text(`Tel: ${COMPANY.phone}  |  ${COMPANY.email}`, 70, 104);
+      .text(settings.address, 70, 92)
+      .text(`Tel: ${settings.phone}  |  ${settings.email}`, 70, 104);
 
     // Etiqueta "ORDEN DE COMPRA" alineada a la derecha dentro del header
     doc
@@ -278,16 +276,17 @@ export class PurchaseOrderPdfService {
     doc.y = rowY + 20;
   }
 
-  private drawFooter(doc: PDFKit.PDFDocument, order: PurchaseOrder) {
+  private drawFooter(doc: PDFKit.PDFDocument, order: PurchaseOrder, settings: AppSettings) {
     const footerY = doc.y + 16;
     doc.moveTo(50, footerY).lineTo(doc.page.width - 50, footerY).strokeColor(COLORS.border).lineWidth(0.5).stroke();
 
+    const taxPart = settings.taxId ? `  ·  NIT/RUC ${settings.taxId}` : '';
     doc
       .fontSize(7)
       .font('Helvetica')
       .fillColor(COLORS.muted)
       .text(
-        `Documento generado el ${this.formatDate(new Date())}  ·  ${COMPANY.name}  ·  RUC ${COMPANY.ruc}  ·  Orden ID: ${order.id}`,
+        `Documento generado el ${this.formatDate(new Date())}  ·  ${settings.companyName}${taxPart}  ·  Orden ID: ${order.id}`,
         50,
         footerY + 8,
         { align: 'center', width: doc.page.width - 100 },

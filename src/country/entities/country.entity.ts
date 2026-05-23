@@ -12,6 +12,12 @@ export class Country {
     @Column({ type: 'varchar', length: 6 })
     prefix!: string;
 
+    @Column({ type: 'varchar', length: 10, default: '' })
+    currency!: string;
+
+    @Column({ type: 'varchar', length: 50, default: '' })
+    currencyName!: string;
+
     @Column({ default: true })
     active!: boolean;
 

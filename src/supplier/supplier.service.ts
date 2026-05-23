@@ -82,7 +82,7 @@ export class SupplierService {
     const queryBuilder = this.supplierRepository.createQueryBuilder('supplier')
     .leftJoinAndSelect('supplier.user', 'user')
     .leftJoinAndSelect('supplier.country', 'country')
-    .addSelect(['user.id', 'user.name', 'country.id', 'country.name', 'country.prefix'])
+    .addSelect(['user.id', 'user.name', 'country.id', 'country.name', 'country.prefix','country.currency','country.currencyName'])
     .orderBy('supplier.createdAt', 'DESC')
     .skip(skip)
     .take(limit);

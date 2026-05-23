@@ -9,6 +9,8 @@ import { SupplierModule } from './supplier/supplier.module';
 import { ProductModule } from './product/product.module';
 import { LoteModule } from './lote/lote.module';
 import { PurchaseOrderModule } from './purchase-order/purchase-order.module';
+import { UserModule } from './user/user.module';
+import { AppSettingsModule } from './app-settings/app-settings.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { PurchaseOrderModule } from './purchase-order/purchase-order.module';
     ProductModule,
     LoteModule,
     PurchaseOrderModule,
+    UserModule,
+    AppSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

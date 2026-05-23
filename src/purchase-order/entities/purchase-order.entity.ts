@@ -13,6 +13,12 @@ export class PurchaseOrder {
     @Column({type: 'enum', enum: PurchaseOrderStatus, default: PurchaseOrderStatus.PENDING})
     status!: PurchaseOrderStatus;
 
+    @Column({ type: 'varchar', length: 10, default: '' })
+    exchangeCurrency!: string;
+
+    @Column({ type: 'decimal', precision: 10, scale: 6, default: 1 })
+    exchangeRate!: number;
+
     @ManyToOne(() => UserEntity, (user) => user.purchaseOrders)
     user!: UserEntity;
 

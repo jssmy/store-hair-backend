@@ -47,6 +47,8 @@ export class PurchaseOrderService {
         purchaseOrderRepository.create({
           user: { id: authUser.id } as PurchaseOrder['user'],
           supplier: { id: supplier.id } as PurchaseOrder['supplier'],
+          exchangeCurrency: createPurchaseOrderDto.exchangeCurrency,
+          exchangeRate: createPurchaseOrderDto.exchangeRate,
         }),
       );
 
@@ -85,9 +87,14 @@ export class PurchaseOrderService {
     const queryBuilder = this.purchaseOrderRepository
       .createQueryBuilder('purchaseOrder')
       .leftJoinAndSelect('purchaseOrder.details', 'detail')
-      .leftJoinAndSelect('purchaseOrder.supplier', 'supplier')
+      .leftJoin('purchaseOrder.supplier', 'supplier')
       .leftJoin('purchaseOrder.user', 'user')
       .addSelect(['user.id', 'user.name'])
+      .addSelect([
+        'supplier.id', 'supplier.type', 'supplier.fullName', 'supplier.businessName',
+        'supplier.dni', 'supplier.ruc', 'supplier.contactFullName', 'supplier.contactDni',
+        'supplier.phone', 'supplier.address', 'supplier.countryId',
+      ])
       .orderBy('purchaseOrder.createdAt', 'DESC')
       .skip(skip)
       .take(limit);

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoteService } from './lote.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
@@ -37,43 +37,43 @@ export class LoteController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener lote por ID', description: 'Retorna un lote específico por su UUID.' })
-  @ApiParam({ name: 'id', description: 'UUID del lote', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiOperation({ summary: 'Obtener lote por ID', description: 'Retorna un lote específico por su ID numérico.' })
+  @ApiParam({ name: 'id', description: 'ID del lote', example: 1 })
   @ApiResponse({ status: 200, description: 'Lote encontrado.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.loteService.findOne(id);
   }
 
   @Patch(':id/status')
   @ApiOperation({ summary: 'Actualizar estado del lote', description: 'Actualiza el estado de un lote. No se permite si el lote ya está completado.' })
-  @ApiParam({ name: 'id', description: 'UUID del lote', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiParam({ name: 'id', description: 'ID del lote', example: 1 })
   @ApiResponse({ status: 200, description: 'Estado actualizado exitosamente.' })
   @ApiResponse({ status: 400, description: 'No se puede actualizar el estado de un lote completado.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
-  updateStatus(@Param('id') id: string, @Body() updateLoteStatusDto: UpdateLoteStatusDto) {
+  updateStatus(@Param('id', ParseIntPipe) id: number, @Body() updateLoteStatusDto: UpdateLoteStatusDto) {
     return this.loteService.updateStatus(id, updateLoteStatusDto.status);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar lote', description: 'Actualiza el estado o los productos de un lote existente.' })
-  @ApiParam({ name: 'id', description: 'UUID del lote', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiParam({ name: 'id', description: 'ID del lote', example: 1 })
   @ApiResponse({ status: 200, description: 'Lote actualizado exitosamente.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
-  update(@Param('id') id: string, @Body() updateLoteDto: UpdateLoteDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateLoteDto: UpdateLoteDto) {
     return this.loteService.update(id, updateLoteDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar lote', description: 'Elimina un lote por su UUID.' })
-  @ApiParam({ name: 'id', description: 'UUID del lote', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @ApiOperation({ summary: 'Eliminar lote', description: 'Elimina un lote por su ID numérico.' })
+  @ApiParam({ name: 'id', description: 'ID del lote', example: 1 })
   @ApiResponse({ status: 200, description: 'Lote eliminado exitosamente.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.loteService.remove(id);
   }
 }

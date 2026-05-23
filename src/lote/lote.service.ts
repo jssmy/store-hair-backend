@@ -157,11 +157,11 @@ export class LoteService {
     };
   }
 
-  findOne(id: string) {
+  findOne(id: number) {
     return this.loteRepository.findOne({ where: { id }, relations: ['products',] });
   }
 
-  async update(id: string, updateLoteDto: UpdateLoteDto) {
+  async update(id: number, updateLoteDto: UpdateLoteDto) {
     const lote = await this.loteRepository.findOne({
       where: { id },
       relations: ['products', 'user'],
@@ -179,22 +179,26 @@ export class LoteService {
     try {
       const productRepository = queryRunner.manager.getRepository(Product);
 
-      const noProducts = !updateLoteDto.products || updateLoteDto.products.length === 0;
-
-      if (noProducts) {
+      // Sync de productos solo cuando el campo viene explícito en el DTO.
+      // Si `products` es undefined (no se envió el campo) → no se toca ningún producto.
+      //
+      // Cuando sí viene el array se aplica la siguiente regla:
+      //   - Con id    → actualizar (debe pertenecer al lote).
+      //   - Sin id    → crear como producto nuevo.
+      //   - Existente cuyo id NO aparece en el payload → eliminar.
+      //
+      // Ejemplo: lote con [A, B, C, D] y payload [A(id), B(id), -, -]
+      //   → actualiza A y B, elimina C y D, crea 2 nuevos.
+      if (updateLoteDto.products !== undefined) {
+        const incomingProducts = updateLoteDto.products;
         const existingProducts = lote.products ?? [];
-        if (existingProducts.length > 0) {
-          await productRepository.remove(existingProducts);
-        }
-      } else {
-        const incomingProducts = updateLoteDto.products!;
-        const existingProducts = lote.products ?? [];
 
+        // IDs que vienen explícitamente → estos se van a actualizar
         const incomingIds = new Set(
           incomingProducts.filter((p) => p.id).map((p) => p.id!),
         );
 
-        // Eliminar productos que ya no están en el DTO
+        // Productos que ya no están en el payload → eliminar
         const toDelete = existingProducts.filter((p) => !incomingIds.has(p.id));
         if (toDelete.length > 0) {
           await productRepository.remove(toDelete);
@@ -205,9 +209,12 @@ export class LoteService {
             const { id: productId, images, ...fields } = productDto;
 
             if (productId) {
+              // Validar que el producto pertenece a este lote
               const existing = existingProducts.find((p) => p.id === productId);
               if (!existing) {
-                throw new NotFoundException(`Producto con ID ${productId} no encontrado en este lote`);
+                throw new NotFoundException(
+                  `Producto con ID ${productId} no encontrado en este lote`,
+                );
               }
 
               const imageUrls = images?.length
@@ -216,6 +223,7 @@ export class LoteService {
 
               await productRepository.update(productId, { ...fields, imageUrls });
             } else {
+              // Sin id → producto nuevo
               const newProduct = productRepository.create({
                 ...fields,
                 imageUrls: await this.normalizeImageUrls(images ?? [], index),
@@ -242,7 +250,7 @@ export class LoteService {
     }
   }
 
-  async updateStatus(id: string, status: LoteStatus) {
+  async updateStatus(id: number, status: LoteStatus) {
     const lote = await this.loteRepository.findOne({ where: { id }, relations: ['products'] });
 
     if (!lote) {
@@ -278,7 +286,7 @@ export class LoteService {
     }
   }
 
-  async remove(id: string) {
+  async remove(id: number) {
     const lote = await this.findOne(id);
 
     if (!lote) {

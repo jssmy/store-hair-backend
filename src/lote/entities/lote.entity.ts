@@ -1,13 +1,19 @@
 import { UserEntity } from "src/auth/infrastructure/user.entity";
 import { Product } from "src/product/entities/product.entity";
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, VirtualColumn } from "typeorm";
 import { PurchaseOrder } from "src/purchase-order/entities/purchase-order.entity";
 import { LoteStatus } from "../enums/lote-status.enum";
 
 @Entity('lotes')
 export class Lote {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    @PrimaryGeneratedColumn('increment')
+    id!: number;
+
+    @VirtualColumn({
+        query: (alias) =>
+            `CONCAT('LT-', EXTRACT(YEAR FROM ${alias}."createdAt"), '-', ${alias}.id)`
+    })
+    lt!: string;
 
     @OneToMany(() => Product, (product) => product.lote)
     products!: Product[];
