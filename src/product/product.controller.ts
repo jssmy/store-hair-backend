@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
 import { ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductImagesInterceptor } from './infrastructure/product-images-upload.config';
+import { FindAllProductQueryDto } from './dto/find-all-product-query.dto';
 
 @ApiTags('Products')
 @Controller('product')
@@ -25,10 +26,10 @@ export class ProductController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar productos', description: 'Retorna todos los productos registrados.' })
-  @ApiResponse({ status: 200, description: 'Lista de productos.' })
-  findAll() {
-    return this.productService.findAll();
+  @ApiOperation({ summary: 'Listar productos', description: 'Retorna la lista paginada de productos con filtros opcionales.' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de productos.' })
+  findAll(@Query() query: FindAllProductQueryDto) {
+    return this.productService.findAll(query);
   }
 
   @Get(':id')
