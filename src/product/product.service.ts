@@ -44,10 +44,29 @@ export class ProductService {
     }
 
     if (query.search) {
-      queryBuilder.andWhere(
-        '(product.name ILIKE :search OR product.type ILIKE :search OR product.color ILIKE :search)',
-        { search: `%${query.search}%` },
-      );
+      // Patrón: PO-YYYY-ID  → e.g. "PO-2026-2"
+      const poPattern = /^PO-(\d{4})-(\d+)$/i;
+      // Patrón: ID con ceros a la izquierda → e.g. "0002"
+      const paddedIdPattern = /^0(\d+)$/;
+
+      const poMatch = query.search.match(poPattern);
+      const paddedMatch = !poMatch && query.search.match(paddedIdPattern);
+
+      if (poMatch) {
+        const year = parseInt(poMatch[1], 10);
+        const id   = parseInt(poMatch[2], 10);
+        queryBuilder
+          .andWhere('product.id = :id', { id })
+          .andWhere('EXTRACT(YEAR FROM product.createdAt) = :year', { year });
+      } else if (paddedMatch) {
+        const id = parseInt(paddedMatch[1], 10);
+        queryBuilder.andWhere('product.id = :id', { id });
+      } else {
+        queryBuilder.andWhere(
+          '(product.name ILIKE :search OR product.type ILIKE :search OR product.color ILIKE :search)',
+          { search: `%${query.search}%` },
+        );
+      }
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
