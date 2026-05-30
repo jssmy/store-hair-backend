@@ -11,6 +11,8 @@ import { LoteModule } from './lote/lote.module';
 import { PurchaseOrderModule } from './purchase-order/purchase-order.module';
 import { UserModule } from './user/user.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
+import { CustomerModule } from './customer/customer.module';
+import { SaleModule } from './sale/sale.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { AppSettingsModule } from './app-settings/app-settings.module';
     PurchaseOrderModule,
     UserModule,
     AppSettingsModule,
+    CustomerModule,
+    SaleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

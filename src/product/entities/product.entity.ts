@@ -1,7 +1,8 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne, PrimaryGeneratedColumn, VirtualColumn } from "typeorm";
+import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, VirtualColumn } from "typeorm";
 import { ProductStatus } from "../enums/product-status.enum";
 import { UserEntity } from "src/auth/infrastructure/user.entity";
 import { Lote } from "src/lote/entities/lote.entity";
+import { SaleDetail } from "src/sale/entities/sale-detail.entity";
 
 
 @Entity('products')
@@ -53,6 +54,9 @@ export class Product {
 
     @ManyToOne(() => Lote, (lote) => lote.products)
     lote!: Lote;
+
+    @OneToMany(() => SaleDetail, (detail) => detail.product)
+    saleDetails!: SaleDetail[];
 
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     createdAt!: Date;
