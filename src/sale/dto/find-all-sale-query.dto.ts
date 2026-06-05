@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { SalePaymentMethod } from '../enums/sale-payment-method.enum';
 
 export class FindAllSaleQueryDto {
@@ -30,4 +30,9 @@ export class FindAllSaleQueryDto {
   @IsInt()
   @Min(1)
   customerId?: number;
+
+  @ApiProperty({ example: 'VT-2026-6', description: 'Buscar por código de venta (soporta VT-2026-6 y VT-2026-006)', required: false })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

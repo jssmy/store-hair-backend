@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, VirtualColumn } from 'typeorm';
 import { UserEntity } from 'src/auth/infrastructure/user.entity';
 import { Customer } from 'src/customer/entities/customer.entity';
 import { SalePaymentMethod } from '../enums/sale-payment-method.enum';
@@ -8,6 +8,12 @@ import { SaleDetail } from './sale-detail.entity';
 export class Sale {
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @VirtualColumn({
+          query: (alias) =>
+              `CONCAT('VT-', EXTRACT(YEAR FROM ${alias}."createdAt"), '-', ${alias}.id)`
+      })
+  vt!: string;
 
   @Column({ type: 'enum', enum: SalePaymentMethod })
   paymentMethod!: SalePaymentMethod;

@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/infrastructure/jwt-auth.guard';
 import { CurrentUser } from '../auth/infrastructure/current-user.decorator';
 import { AuthUser } from '../auth/domain/auth-user.entity';
 import { SaleService } from './sale.service';
+import { SalePdfService } from './sale-pdf.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { FindAllSaleQueryDto } from './dto/find-all-sale-query.dto';
 
@@ -12,7 +13,10 @@ import { FindAllSaleQueryDto } from './dto/find-all-sale-query.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('sale')
 export class SaleController {
-  constructor(private readonly saleService: SaleService) {}
+  constructor(
+    private readonly saleService: SaleService,
+    private readonly salePdfService: SalePdfService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Registrar venta', description: 'Crea una nueva venta asociada al usuario autenticado y al cliente indicado.' })
@@ -40,5 +44,22 @@ export class SaleController {
   @ApiResponse({ status: 404, description: 'Venta no encontrada.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.saleService.findOne(id);
+  }
+
+  @Get(':id/pdf')
+  @ApiOperation({ summary: 'Descargar boleta PDF', description: 'Genera y devuelve la boleta de venta en formato PDF.' })
+  @ApiParam({ name: 'id', description: 'ID numérico de la venta', example: 1 })
+  @ApiProduces('application/pdf')
+  @ApiResponse({ status: 200, description: 'PDF generado exitosamente.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Venta no encontrada.' })
+  async downloadPdf(@Param('id', ParseIntPipe) id: number, @Res() res: any) {
+    const buffer = await this.salePdfService.generatePdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="boleta-VT-${id}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 }

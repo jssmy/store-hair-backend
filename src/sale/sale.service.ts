@@ -81,8 +81,18 @@ export class SaleService {
       .leftJoin('sale.user', 'user')
       .addSelect(['user.id', 'user.name', 'user.email'])
       .leftJoinAndSelect('sale.details', 'details')
-      .leftJoinAndSelect('details.product', 'product')
-      .orderBy('sale.createdAt', 'DESC')
+      .leftJoin('details.product', 'product')
+      .addSelect([
+        'product.id',
+        'product.name',
+        'product.price',
+        'product.type',
+        'product.color',
+        'product.length',
+        'product.weight',
+        'product.createdAt',
+          
+      ]).orderBy('sale.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
 
@@ -94,7 +104,32 @@ export class SaleService {
       qb.andWhere('customer.id = :customerId', { customerId: query.customerId });
     }
 
+
+    if (query.search) {
+      const term = query.search.trim();
+      const fullMatch = term.match(/^VT-(\d{4})-(\d+)$/i);
+      const idOnlyMatch = term.match(/^(\d+)$/);
+
+      if (fullMatch) {
+        const year = parseInt(fullMatch[1], 10);
+        const id = parseInt(fullMatch[2], 10);
+        qb.andWhere('EXTRACT(YEAR FROM sale.createdAt) = :year AND sale.id = :id', { year, id });
+      } else if (idOnlyMatch) {
+        qb.andWhere('sale.id = :id', { id: parseInt(idOnlyMatch[1], 10) });
+      }
+    }
+
     const [data, total] = await qb.getManyAndCount();
+
+    data.forEach((sale) => {
+      sale.details?.forEach((detail) => {
+        const product = detail.product;
+        if (!product || !product.createdAt || !product.id) return;
+
+        const year = new Date(product.createdAt).getFullYear();
+        product.po = `PO-${year}-${product.id}`;
+      });
+    });
 
     return {
       data,
@@ -115,7 +150,17 @@ export class SaleService {
       .leftJoin('sale.user', 'user')
       .addSelect(['user.id', 'user.name', 'user.email'])
       .leftJoinAndSelect('sale.details', 'details')
-      .leftJoinAndSelect('details.product', 'product')
+      .leftJoin('details.product', 'product')
+      .addSelect([
+        'product.id',
+        'product.name',
+        'product.price',
+        'product.type',
+        'product.color',
+        'product.length',
+        'product.weight',
+        'product.createdAt',
+      ])
       .where('sale.id = :id', { id })
       .getOne();
 
