@@ -174,12 +174,13 @@ export class SalePdfService {
     doc.fontSize(9).font('Helvetica-Bold').fillColor(COLORS.muted).text('DETALLE DE LA VENTA', tableLeft, top);
     doc.moveTo(tableLeft, top + 12).lineTo(doc.page.width - 50, top + 12).strokeColor(COLORS.accent).lineWidth(1.5).stroke();
 
-    // Columnas: #, Código, Nombre/Descripción, Precio
     const cols = [
-      { label: '#',            width: 25,  align: 'center' as const },
-      { label: 'Código',       width: 90,  align: 'left'   as const },
-      { label: 'Descripción',  width: 280, align: 'left'   as const },
-      { label: 'Precio',       width: 80,  align: 'right'  as const },
+      { label: '#',           width: 25,  align: 'center' as const },
+      { label: 'Código',      width: 80,  align: 'left'   as const },
+      { label: 'Descripción', width: 185, align: 'left'   as const },
+      { label: 'Peso (g)',    width: 55,  align: 'right'  as const },
+      { label: 'Precio/g',   width: 75,  align: 'right'  as const },
+      { label: 'Total',       width: 75,  align: 'right'  as const },
     ];
 
     const rowH = 20;
@@ -213,13 +214,17 @@ export class SalePdfService {
       const p = d.product;
       const po = (p as any)?.po ?? `#${p?.id}`;
       const description = p?.name ?? '—';
-      const price = Number(d.salePrice);
+      const unitPrice = Number(d.salePrice);
+      const weight = Number(p?.weight ?? 0);
+      const rowTotal = unitPrice * weight;
 
       const cells = [
-        { value: String(i + 1),               align: 'center' as const },
-        { value: po,                           align: 'left'   as const },
-        { value: description,                  align: 'left'   as const },
-        { value: this.formatCurrency(price),   align: 'right'  as const },
+        { value: String(i + 1),                    align: 'center' as const },
+        { value: po,                                align: 'left'   as const },
+        { value: description,                       align: 'left'   as const },
+        { value: weight > 0 ? `${weight} g` : '—', align: 'right'  as const },
+        { value: this.formatCurrency(unitPrice),    align: 'right'  as const },
+        { value: this.formatCurrency(rowTotal),     align: 'right'  as const },
       ];
 
       cx = tableLeft;

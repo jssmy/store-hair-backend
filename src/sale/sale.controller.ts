@@ -6,6 +6,7 @@ import { AuthUser } from '../auth/domain/auth-user.entity';
 import { SaleService } from './sale.service';
 import { SalePdfService } from './sale-pdf.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { CreateSalePaymentDto } from './dto/create-sale-payment.dto';
 import { FindAllSaleQueryDto } from './dto/find-all-sale-query.dto';
 
 @ApiTags('Sales')
@@ -44,6 +45,16 @@ export class SaleController {
   @ApiResponse({ status: 404, description: 'Venta no encontrada.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.saleService.findOne(id);
+  }
+
+  @Post(':id/payments')
+  @ApiOperation({ summary: 'Registrar pago', description: 'Agrega un pago a una venta existente. El monto no puede superar el saldo pendiente.' })
+  @ApiParam({ name: 'id', description: 'ID numérico de la venta', example: 1 })
+  @ApiResponse({ status: 201, description: 'Pago registrado.' })
+  @ApiResponse({ status: 400, description: 'Monto inválido o excede el saldo pendiente.' })
+  @ApiResponse({ status: 404, description: 'Venta no encontrada.' })
+  addPayment(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateSalePaymentDto) {
+    return this.saleService.addPayment(id, dto);
   }
 
   @Get(':id/pdf')
