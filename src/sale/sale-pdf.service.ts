@@ -5,6 +5,7 @@ import PDFDocument = require('pdfkit');
 import { Sale } from './entities/sale.entity';
 import { SaleDetail } from './entities/sale-detail.entity';
 import { SalePaymentMethod } from './enums/sale-payment-method.enum';
+import { SalePaymentType } from './enums/sale-payment-type.enum';
 import { AppSettingsService } from 'src/app-settings/app-settings.service';
 import { AppSettings } from 'src/app-settings/entities/app-settings.entity';
 
@@ -40,6 +41,7 @@ export class SalePdfService {
         .addSelect(['user.id', 'user.name', 'user.email'])
         .leftJoinAndSelect('sale.details', 'details')
         .leftJoinAndSelect('details.product', 'product')
+        .leftJoinAndSelect('sale.payments', 'payments')
         .where('sale.id = :id', { id })
         .getOne(),
       this.appSettingsService.get(),
@@ -245,23 +247,75 @@ export class SalePdfService {
   }
 
   private drawPaymentSummary(doc: PDFKit.PDFDocument, sale: Sale) {
+    const payments = [...(sale.payments ?? [])].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    const total = Number(sale.totalAmount);
+    const paid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const balance = total - paid;
+
+    // ── Tabla de pagos ────────────────────────────────────────────────────────
+    if (payments.length > 0) {
+      const tableLeft = 50;
+      const tableWidth = doc.page.width - 100;
+      const top = doc.y + 10;
+
+      doc.fontSize(9).font('Helvetica-Bold').fillColor(COLORS.muted).text('HISTORIAL DE PAGOS', tableLeft, top);
+      doc.moveTo(tableLeft, top + 12).lineTo(doc.page.width - 50, top + 12).strokeColor(COLORS.accent).lineWidth(1.5).stroke();
+
+      const cols = [
+        { label: '#',     width: 25,  align: 'center' as const },
+        { label: 'Tipo',  width: 110, align: 'left'   as const },
+        { label: 'Fecha', width: 155, align: 'left'   as const },
+        { label: 'Monto', width: 205, align: 'right'  as const },
+      ];
+
+      const rowH = 20;
+      const headerY = top + 18;
+
+      doc.rect(tableLeft, headerY, tableWidth, rowH).fill(COLORS.primary);
+      let cx = tableLeft;
+      for (const col of cols) {
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff')
+          .text(col.label, cx + 4, headerY + 6, { width: col.width - 8, align: col.align });
+        cx += col.width;
+      }
+
+      let rowY = headerY + rowH;
+      for (let i = 0; i < payments.length; i++) {
+        const p = payments[i];
+        doc.rect(tableLeft, rowY, tableWidth, rowH).fill(i % 2 === 0 ? '#ffffff' : COLORS.light);
+
+        const typeLabel = p.type === SalePaymentType.CASH ? 'Efectivo' : 'Transferencia';
+        const cells = [
+          { value: String(i + 1),                        align: 'center' as const },
+          { value: typeLabel,                             align: 'left'   as const },
+          { value: this.formatDate(p.createdAt),          align: 'left'   as const },
+          { value: this.formatCurrency(Number(p.amount)), align: 'right'  as const },
+        ];
+
+        cx = tableLeft;
+        for (let j = 0; j < cols.length; j++) {
+          doc.fontSize(8).font('Helvetica').fillColor(COLORS.text)
+            .text(cells[j].value, cx + 4, rowY + 6, { width: cols[j].width - 8, align: cells[j].align });
+          cx += cols[j].width;
+        }
+        rowY += rowH;
+      }
+
+      doc.moveTo(tableLeft, rowY).lineTo(tableLeft + tableWidth, rowY).strokeColor(COLORS.border).lineWidth(0.5).stroke();
+      doc.y = rowY + 10;
+    }
+
+    // ── Resumen de totales ────────────────────────────────────────────────────
     const summaryX = doc.page.width - 50 - 220;
     let y = doc.y + 6;
 
-    const total = Number(sale.totalAmount);
-    const cash = Number(sale.cashAmount);
-    const transfer = Number(sale.transferAmount);
-    const paid = cash + transfer;
-    const balance = total - paid;
+    const summaryRows: [string, string][] = [];
+    if (paid > 0) summaryRows.push(['Abonado:', this.formatCurrency(paid)]);
+    if (balance > 0.01) summaryRows.push(['Saldo pendiente:', this.formatCurrency(balance)]);
 
-    const rows: [string, string][] = [];
-
-    if (cash > 0) rows.push(['Efectivo:', this.formatCurrency(cash)]);
-    if (transfer > 0) rows.push(['Transferencia:', this.formatCurrency(transfer)]);
-    if (rows.length > 0) rows.push(['Abonado:', this.formatCurrency(paid)]);
-    if (balance > 0.01) rows.push(['Saldo pendiente:', this.formatCurrency(balance)]);
-
-    for (const [label, value] of rows) {
+    for (const [label, value] of summaryRows) {
       doc.fontSize(9).font('Helvetica').fillColor(COLORS.muted).text(label, summaryX, y, { width: 130, align: 'right' });
       doc.fontSize(9).font('Helvetica').fillColor(COLORS.text).text(value, summaryX + 136, y, { width: 84, align: 'right' });
       y += 14;
