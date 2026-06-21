@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNumber, IsPositive, IsString, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsNumber, IsOptional, IsPositive, IsString, ValidateNested } from 'class-validator';
 import { CreatePurchaseOrderDetailDto } from './create-purchase-order-detail.dto';
 
 export class CreatePurchaseOrderDto {
@@ -9,15 +9,22 @@ export class CreatePurchaseOrderDto {
   @IsPositive()
   supplierId!: number;
 
-  @ApiProperty({ example: 'USD', description: 'Moneda de la orden (ejemplo: USD, PEN)' })
-  @IsString()
-  exchangeCurrency!: string;
-
-  @ApiProperty({ example: 3.5, description: 'Tipo de cambio aplicado a la orden (ejemplo: 3.5)' })
+  @ApiPropertyOptional({ example: 4200.5, description: 'Tipo de cambio COP → USD al momento de la orden' })
+  @IsOptional()
   @IsNumber()
   @IsPositive()
-  exchangeRate!: number;
+  tc_usd?: number;
 
+  @ApiPropertyOptional({ example: 'USD', description: 'Moneda de conversión (ejemplo: USD, EUR)' })
+  @IsOptional()
+  @IsString()
+  tc_converted_currency?: string;
+
+  @ApiPropertyOptional({ example: 250.75, description: 'Valor total de la orden expresado en la moneda de conversión' })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  tc_converted_value?: number;
 
   @ApiProperty({ type: [CreatePurchaseOrderDetailDto], description: 'Detalle de productos de la orden (mínimo 1)', minItems: 1 })
   @IsArray()

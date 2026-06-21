@@ -13,11 +13,14 @@ export class PurchaseOrder {
     @Column({type: 'enum', enum: PurchaseOrderStatus, default: PurchaseOrderStatus.PENDING})
     status!: PurchaseOrderStatus;
 
-    @Column({ type: 'varchar', length: 10, default: '' })
-    exchangeCurrency!: string;
+    @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+    tc_usd!: number;
 
-    @Column({ type: 'decimal', precision: 10, scale: 6, default: 1 })
-    exchangeRate!: number;
+    @Column({ type: 'varchar', length: 10, nullable: true })
+    tc_converted_currency!: string;
+
+    @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+    tc_converted_value!: number;
 
     @ManyToOne(() => UserEntity, (user) => user.purchaseOrders)
     user!: UserEntity;
@@ -51,5 +54,22 @@ export class PurchaseOrder {
 
     @Column({ type: 'timestamp', nullable: true })
     approvedAt!: Date;
+
+    toJSON() {
+        const totalCop = (this.details ?? []).reduce((sum, d) => sum + Number(d.price), 0);
+        const usdTotal = this.tc_usd
+            ? +(totalCop / Number(this.tc_usd)).toFixed(2)
+            : null;
+        const convertedTotal = usdTotal !== null && this.tc_converted_value
+            ? +(usdTotal * Number(this.tc_converted_value)).toFixed(2)
+            : null;
+
+        return {
+            ...this,
+            total_cop: +totalCop.toFixed(2),
+            usd_total: usdTotal,
+            converted_total: convertedTotal,
+        };
+    }
 
 }

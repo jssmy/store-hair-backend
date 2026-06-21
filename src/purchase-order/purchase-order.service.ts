@@ -47,8 +47,9 @@ export class PurchaseOrderService {
         purchaseOrderRepository.create({
           user: { id: authUser.id } as PurchaseOrder['user'],
           supplier: { id: supplier.id } as PurchaseOrder['supplier'],
-          exchangeCurrency: createPurchaseOrderDto.exchangeCurrency,
-          exchangeRate: createPurchaseOrderDto.exchangeRate,
+          tc_usd: createPurchaseOrderDto.tc_usd,
+          tc_converted_currency: createPurchaseOrderDto.tc_converted_currency,
+          tc_converted_value: createPurchaseOrderDto.tc_converted_value,
         }),
       );
 
@@ -191,8 +192,13 @@ export class PurchaseOrderService {
         }
 
         purchaseOrder.supplier = { id: supplier.id } as PurchaseOrder['supplier'];
-        await purchaseOrderRepository.save(purchaseOrder);
       }
+
+      if (updatePurchaseOrderDto.tc_usd !== undefined) purchaseOrder.tc_usd = updatePurchaseOrderDto.tc_usd;
+      if (updatePurchaseOrderDto.tc_converted_currency !== undefined) purchaseOrder.tc_converted_currency = updatePurchaseOrderDto.tc_converted_currency;
+      if (updatePurchaseOrderDto.tc_converted_value !== undefined) purchaseOrder.tc_converted_value = updatePurchaseOrderDto.tc_converted_value;
+
+      await purchaseOrderRepository.save(purchaseOrder);
 
       if (updatePurchaseOrderDto.details !== undefined) {
         const existingDetails = purchaseOrder.details ?? [];
