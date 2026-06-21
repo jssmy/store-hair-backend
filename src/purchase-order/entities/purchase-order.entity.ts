@@ -56,7 +56,7 @@ export class PurchaseOrder {
     approvedAt!: Date;
 
     toJSON() {
-        const totalCop = (this.details ?? []).reduce((sum, d) => sum + Number(d.price), 0);
+        const totalCop = (this.details ?? []).reduce((sum, d) => sum + Number(d.weight) * Number(d.price), 0);
         const usdTotal = this.tc_usd
             ? +(totalCop / Number(this.tc_usd)).toFixed(2)
             : null;

@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import PDFDocument = require('pdfkit');
 import { PurchaseOrder } from './entities/purchase-order.entity';
-import { PurchaseOrderDetail } from './entities/purchase-order-detail.entity';
 import { PurchaseOrderStatus } from './enums/purchase-order-status.enum';
 import { AppSettingsService } from 'src/app-settings/app-settings.service';
 import { AppSettings } from 'src/app-settings/entities/app-settings.entity';
@@ -60,7 +59,7 @@ export class PurchaseOrderPdfService {
       this.drawHeader(doc, settings);
       this.drawOrderMeta(doc, order);
       this.drawSupplierInfo(doc, order);
-      this.drawDetailsTable(doc, order.details ?? []);
+      this.drawDetailsTable(doc, order);
       this.drawFooter(doc, order, settings);
 
       doc.end();
@@ -181,7 +180,8 @@ export class PurchaseOrderPdfService {
     doc.y = y + 10;
   }
 
-  private drawDetailsTable(doc: PDFKit.PDFDocument, details: PurchaseOrderDetail[]) {
+  private drawDetailsTable(doc: PDFKit.PDFDocument, order: PurchaseOrder) {
+    const details = order.details ?? [];
     const top = doc.y + 10;
     const tableLeft = 50;
     const tableWidth = doc.page.width - 100;
@@ -194,15 +194,15 @@ export class PurchaseOrderPdfService {
 
     doc.moveTo(tableLeft, top + 12).lineTo(doc.page.width - 50, top + 12).strokeColor(COLORS.accent).lineWidth(1.5).stroke();
 
-    // Columnas: #, Color, Tipo, Largo, Peso, P. Unit., Subtotal
+    // Columnas: #, Color, Tipo, Largo, Peso, P. Unit. (COP), Subtotal (COP)
     const cols = [
-      { label: '#',         width: 25,  align: 'center' as const },
-      { label: 'Color',     width: 80,  align: 'left'   as const },
-      { label: 'Tipo',      width: 80,  align: 'left'   as const },
-      { label: 'Largo',     width: 55,  align: 'right'  as const },
-      { label: 'Peso',      width: 55,  align: 'right'  as const },
-      { label: 'P. Unit.',  width: 75,  align: 'right'  as const },
-      { label: 'Subtotal',  width: 75,  align: 'right'  as const },
+      { label: '#',              width: 25,  align: 'center' as const },
+      { label: 'Color',          width: 80,  align: 'left'   as const },
+      { label: 'Tipo',           width: 80,  align: 'left'   as const },
+      { label: 'Largo',          width: 55,  align: 'right'  as const },
+      { label: 'Peso',           width: 55,  align: 'right'  as const },
+      { label: 'P. Unit. (COP)', width: 75,  align: 'right'  as const },
+      { label: 'Subtotal (COP)', width: 75,  align: 'right'  as const },
     ];
 
     const rowH = 20;
@@ -223,7 +223,7 @@ export class PurchaseOrderPdfService {
 
     // Filas
     let rowY = headerY + rowH;
-    let total = 0;
+    let totalCop = 0;
 
     if (details.length === 0) {
       doc.rect(tableLeft, rowY, tableWidth, rowH).fill(COLORS.light);
@@ -239,7 +239,7 @@ export class PurchaseOrderPdfService {
       const price = Number(d.price);
       const weight = Number(d.weight);
       const subtotal = weight * price;
-      total += subtotal;
+      totalCop += subtotal;
 
       const cells = [
         { value: String(i + 1),                       align: 'center' as const },
@@ -247,8 +247,8 @@ export class PurchaseOrderPdfService {
         { value: d.type,                               align: 'left'   as const },
         { value: `${Number(d.length).toFixed(2)} pg`,  align: 'right'  as const },
         { value: `${weight.toFixed(2)} g`,             align: 'right'  as const },
-        { value: this.formatCurrency(price),           align: 'right'  as const },
-        { value: this.formatCurrency(subtotal),        align: 'right'  as const },
+        { value: this.formatCOP(price),                align: 'right'  as const },
+        { value: this.formatCOP(subtotal),             align: 'right'  as const },
       ];
 
       cx = tableLeft;
@@ -267,13 +267,48 @@ export class PurchaseOrderPdfService {
     // Línea inferior tabla
     doc.moveTo(tableLeft, rowY).lineTo(tableLeft + tableWidth, rowY).strokeColor(COLORS.border).lineWidth(0.5).stroke();
 
-    // Fila total
-    rowY += 4;
-    const totalLabelX = tableLeft + tableWidth - cols[cols.length - 1].width - cols[cols.length - 2].width;
-    doc.fontSize(9).font('Helvetica-Bold').fillColor(COLORS.primary).text('TOTAL', totalLabelX, rowY, { width: cols[cols.length - 2].width, align: 'right' });
-    doc.fontSize(10).font('Helvetica-Bold').fillColor(COLORS.accent).text(this.formatCurrency(total), tableLeft + tableWidth - cols[cols.length - 1].width, rowY, { width: cols[cols.length - 1].width - 4, align: 'right' });
+    const labelX  = tableLeft + tableWidth - cols[cols.length - 1].width - cols[cols.length - 2].width;
+    const valueX  = tableLeft + tableWidth - cols[cols.length - 1].width;
+    const labelW  = cols[cols.length - 2].width;
+    const valueW  = cols[cols.length - 1].width - 4;
 
-    doc.y = rowY + 20;
+    const drawSummaryRow = (label: string, value: string, yOffset: number, bold = false) => {
+      doc
+        .fontSize(bold ? 9 : 8)
+        .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+        .fillColor(bold ? COLORS.primary : COLORS.muted)
+        .text(label, labelX, rowY + yOffset, { width: labelW, align: 'right' });
+      doc
+        .fontSize(bold ? 10 : 8)
+        .font('Helvetica-Bold')
+        .fillColor(bold ? COLORS.accent : COLORS.muted)
+        .text(value, valueX, rowY + yOffset, { width: valueW, align: 'right' });
+    };
+
+    // Total COP
+    drawSummaryRow('TOTAL COP', this.formatCOP(totalCop), 6, true);
+    let summaryHeight = 20;
+
+    // Conversión a USD
+    if (order.tc_usd) {
+      const tcUsd = Number(order.tc_usd);
+      const usdTotal = totalCop / tcUsd;
+      drawSummaryRow(`TC: 1 USD = ${this.formatCOP(tcUsd)}`, '', summaryHeight + 2);
+      drawSummaryRow('TOTAL USD', this.formatUSD(usdTotal), summaryHeight + 12, true);
+      summaryHeight += 26;
+
+      // Conversión a moneda destino
+      if (order.tc_converted_currency && order.tc_converted_value) {
+        const tcDest = Number(order.tc_converted_value);
+        const destTotal = usdTotal * tcDest;
+        const cur = order.tc_converted_currency.toUpperCase();
+        drawSummaryRow(`TC: 1 USD = ${tcDest.toFixed(4)} ${cur}`, '', summaryHeight + 2);
+        drawSummaryRow(`TOTAL ${cur}`, this.formatConverted(destTotal, cur), summaryHeight + 12, true);
+        summaryHeight += 26;
+      }
+    }
+
+    doc.y = rowY + summaryHeight + 10;
   }
 
   private drawFooter(doc: PDFKit.PDFDocument, order: PurchaseOrder, settings: AppSettings) {
@@ -314,8 +349,16 @@ export class PurchaseOrderPdfService {
     }).format(new Date(date));
   }
 
-  private formatCurrency(value: number): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  private formatCOP(value: number): string {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
+  }
+
+  private formatUSD(value: number): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
+  }
+
+  private formatConverted(value: number, currency: string): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2 }).format(value);
   }
 
   private statusColor(status: PurchaseOrderStatus): string {
