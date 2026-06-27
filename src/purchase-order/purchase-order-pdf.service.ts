@@ -186,6 +186,14 @@ export class PurchaseOrderPdfService {
     const tableLeft = 50;
     const tableWidth = doc.page.width - 100;
 
+    // Determinar moneda principal de la orden (moneda del proveedor)
+    const hasPurchaseCurrency = !!(order.purchase_currency && order.tc_cop_purchase_currency);
+    const displayCurrency = hasPurchaseCurrency ? order.purchase_currency.toUpperCase() : 'COP';
+    const tcRate = hasPurchaseCurrency ? Number(order.tc_cop_purchase_currency) : null;
+
+    const formatDisplay = (val: number) =>
+      displayCurrency === 'COP' ? this.formatCOP(val) : this.formatConverted(val, displayCurrency);
+
     doc
       .fontSize(9)
       .font('Helvetica-Bold')
@@ -194,21 +202,19 @@ export class PurchaseOrderPdfService {
 
     doc.moveTo(tableLeft, top + 12).lineTo(doc.page.width - 50, top + 12).strokeColor(COLORS.accent).lineWidth(1.5).stroke();
 
-    // Columnas: #, Color, Tipo, Largo, Peso, P. Unit. (COP), Subtotal (COP)
     const cols = [
-      { label: '#',              width: 25,  align: 'center' as const },
-      { label: 'Color',          width: 80,  align: 'left'   as const },
-      { label: 'Tipo',           width: 80,  align: 'left'   as const },
-      { label: 'Largo',          width: 55,  align: 'right'  as const },
-      { label: 'Peso',           width: 55,  align: 'right'  as const },
-      { label: 'P. Unit. (COP)', width: 75,  align: 'right'  as const },
-      { label: 'Subtotal (COP)', width: 75,  align: 'right'  as const },
+      { label: '#',                              width: 25,  align: 'center' as const },
+      { label: 'Color',                          width: 80,  align: 'left'   as const },
+      { label: 'Tipo',                           width: 80,  align: 'left'   as const },
+      { label: 'Largo',                          width: 55,  align: 'right'  as const },
+      { label: 'Peso',                           width: 55,  align: 'right'  as const },
+      { label: `P. Unit. (${displayCurrency})`,  width: 75,  align: 'right'  as const },
+      { label: `Subtotal (${displayCurrency})`,  width: 75,  align: 'right'  as const },
     ];
 
     const rowH = 20;
     const headerY = top + 18;
 
-    // Encabezado de tabla
     doc.rect(tableLeft, headerY, tableWidth, rowH).fill(COLORS.primary);
 
     let cx = tableLeft;
@@ -221,9 +227,8 @@ export class PurchaseOrderPdfService {
       cx += col.width;
     }
 
-    // Filas
     let rowY = headerY + rowH;
-    let totalCop = 0;
+    let totalValue = 0;
 
     if (details.length === 0) {
       doc.rect(tableLeft, rowY, tableWidth, rowH).fill(COLORS.light);
@@ -238,17 +243,20 @@ export class PurchaseOrderPdfService {
 
       const price = Number(d.price);
       const weight = Number(d.weight);
-      const subtotal = weight * price;
-      totalCop += subtotal;
+      const subtotal =  price * weight;
+      totalValue += subtotal;
+
+      const displayPrice = price;
+      const displaySubtotal = subtotal  ;
 
       const cells = [
-        { value: String(i + 1),                       align: 'center' as const },
-        { value: d.color,                              align: 'left'   as const },
-        { value: d.type,                               align: 'left'   as const },
-        { value: `${Number(d.length).toFixed(2)} pg`,  align: 'right'  as const },
-        { value: `${weight.toFixed(2)} g`,             align: 'right'  as const },
-        { value: this.formatCOP(price),                align: 'right'  as const },
-        { value: this.formatCOP(subtotal),             align: 'right'  as const },
+        { value: String(i + 1),                        align: 'center' as const },
+        { value: d.color,                               align: 'left'   as const },
+        { value: d.type,                                align: 'left'   as const },
+        { value: `${Number(d.length).toFixed(2)} pg`,   align: 'right'  as const },
+        { value: `${weight.toFixed(2)} g`,              align: 'right'  as const },
+        { value: formatDisplay(displayPrice),           align: 'right'  as const },
+        { value: formatDisplay(displaySubtotal),        align: 'right'  as const },
       ];
 
       cx = tableLeft;
@@ -264,12 +272,12 @@ export class PurchaseOrderPdfService {
       rowY += rowH;
     }
 
-    // Línea inferior tabla
     doc.moveTo(tableLeft, rowY).lineTo(tableLeft + tableWidth, rowY).strokeColor(COLORS.border).lineWidth(0.5).stroke();
 
-    const labelX  = tableLeft + tableWidth - cols[cols.length - 1].width - cols[cols.length - 2].width;
+    // El label abarca 3 columnas (Peso + P.Unit + Subtotal) para evitar wrap en textos TC largos
+    const labelX  = tableLeft + tableWidth - cols[cols.length - 1].width - cols[cols.length - 2].width - cols[cols.length - 3].width;
     const valueX  = tableLeft + tableWidth - cols[cols.length - 1].width;
-    const labelW  = cols[cols.length - 2].width;
+    const labelW  = cols[cols.length - 3].width + cols[cols.length - 2].width - 4;
     const valueW  = cols[cols.length - 1].width - 4;
 
     const drawSummaryRow = (label: string, value: string, yOffset: number, bold = false) => {
@@ -285,26 +293,27 @@ export class PurchaseOrderPdfService {
         .text(value, valueX, rowY + yOffset, { width: valueW, align: 'right' });
     };
 
-    // Total COP
-    drawSummaryRow('TOTAL COP', this.formatCOP(totalCop), 6, true);
+    const totalDisplay = totalValue;
+
+    // Total en moneda principal del proveedor
+    drawSummaryRow(`TOTAL ${displayCurrency}`, formatDisplay(totalDisplay), 6, true);
     let summaryHeight = 20;
+
+    // Si la moneda principal no es COP, mostrar el equivalente en COP
+    if (hasPurchaseCurrency) {
+      const tcRate2 = tcRate as number;
+      drawSummaryRow(`TC: 1 ${displayCurrency} = ${this.formatCOP(tcRate2)}`, '', summaryHeight + 2);
+      drawSummaryRow('TOTAL COP', this.formatCOP(totalValue * tcRate2), summaryHeight + 12);
+      summaryHeight += 26;
+    }
 
     // Conversión a USD
     if (order.tc_cop_usd) {
       const tcUsd = Number(order.tc_cop_usd);
-      const usdTotal = totalCop / tcUsd;
+      const tcRate2 = tcRate as number;
+      const usdTotal = (totalValue * tcRate2) / tcUsd;
       drawSummaryRow(`TC: 1 USD = ${this.formatCOP(tcUsd)}`, '', summaryHeight + 2);
       drawSummaryRow('TOTAL USD', this.formatUSD(usdTotal), summaryHeight + 12, true);
-      summaryHeight += 26;
-    }
-
-    // Conversión a moneda de compra
-    if (order.purchase_currency && order.tc_cop_purchase_currency) {
-      const tcPurchase = Number(order.tc_cop_purchase_currency);
-      const purchaseTotal = totalCop / tcPurchase;
-      const cur = order.purchase_currency.toUpperCase();
-      drawSummaryRow(`TC: 1 ${cur} = ${this.formatCOP(tcPurchase)}`, '', summaryHeight + 2);
-      drawSummaryRow(`TOTAL ${cur}`, this.formatConverted(purchaseTotal, cur), summaryHeight + 12, true);
       summaryHeight += 26;
     }
 
