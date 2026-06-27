@@ -8,20 +8,10 @@ import { UserEntity } from 'src/auth/infrastructure/user.entity';
 import { LoteStatus } from './enums/lote-status.enum';
 import { AuthUser } from 'src/auth/domain/auth-user.entity';
 import { Product } from 'src/product/entities/product.entity';
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
 import { FindAllLoteQueryDto } from './dto/find-all-lote-query.dto';
 import { PurchaseOrder } from 'src/purchase-order/entities/purchase-order.entity';
 import { PurchaseOrderStatus } from 'src/purchase-order/enums/purchase-order-status.enum';
-
-const BASE64_IMAGE_REGEX = /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/]+=*)$/;
-const HTTP_IMAGE_URL_REGEX = /^https?:\/\/\S+$/i;
-const MIME_TYPE_TO_EXTENSION: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
+import { ProductService } from 'src/product/product.service';
 
 @Injectable()
 export class LoteService {
@@ -30,22 +20,16 @@ export class LoteService {
     private readonly dataSource: DataSource,
     @InjectRepository(Lote)
     private readonly loteRepository: Repository<Lote>,
-
+    private readonly productService: ProductService,
   ) { }
 
-  async create(
-    createLoteDto: CreateLoteDto,
-    authUser: AuthUser,
-  ) {
-
-
+  async create(createLoteDto: CreateLoteDto, authUser: AuthUser) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
       const loteRepository = queryRunner.manager.getRepository(Lote);
-      const productRepository = queryRunner.manager.getRepository(Product);
       const purchaseOrderRepository = queryRunner.manager.getRepository(PurchaseOrder);
 
       const purchaseOrder = await purchaseOrderRepository.findOne({ where: { id: createLoteDto.purchaseOrderId } });
@@ -70,33 +54,15 @@ export class LoteService {
 
       const user = { id: authUser.id } as UserEntity;
 
-      // 1. Guardar el lote vacío primero para obtener su ID
       const lote = await loteRepository.save(
         loteRepository.create({ user, purchaseOrder }),
       );
 
       await purchaseOrderRepository.update(purchaseOrder.id, { status: PurchaseOrderStatus.COMPLETED });
 
-      // 2. Crear cada producto con sus imágenes y asociarlo al lote/usuario
-      const products = await Promise.all(
-        createLoteDto.products.map(async (productDto, productIndex) =>
-          productRepository.create({
-            ...productDto,
-            imageUrls: await this.normalizeImageUrls(productDto.images ?? [], productIndex),
-            user,
-            lote,
-          }),
-        ),
-      );
-
-      await productRepository.save(products);
       await queryRunner.commitTransaction();
 
-      // 3. Retornar lote con sus productos
-      return this.loteRepository.findOne({
-        where: { id: lote.id },
-        relations: ['products'],
-      });
+      return lote;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -158,96 +124,7 @@ export class LoteService {
   }
 
   findOne(id: number) {
-    return this.loteRepository.findOne({ where: { id }, relations: ['products',] });
-  }
-
-  async update(id: number, updateLoteDto: UpdateLoteDto) {
-    const lote = await this.loteRepository.findOne({
-      where: { id },
-      relations: ['products', 'user'],
-    });
-
-    if (!lote) {
-      throw new NotFoundException(`Lote con ID ${id} no encontrado`);
-    }
-
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const productRepository = queryRunner.manager.getRepository(Product);
-
-      // Sync de productos solo cuando el campo viene explícito en el DTO.
-      // Si `products` es undefined (no se envió el campo) → no se toca ningún producto.
-      //
-      // Cuando sí viene el array se aplica la siguiente regla:
-      //   - Con id    → actualizar (debe pertenecer al lote).
-      //   - Sin id    → crear como producto nuevo.
-      //   - Existente cuyo id NO aparece en el payload → eliminar.
-      //
-      // Ejemplo: lote con [A, B, C, D] y payload [A(id), B(id), -, -]
-      //   → actualiza A y B, elimina C y D, crea 2 nuevos.
-      if (updateLoteDto.products !== undefined) {
-        const incomingProducts = updateLoteDto.products;
-        const existingProducts = lote.products ?? [];
-
-        // IDs que vienen explícitamente → estos se van a actualizar
-        const incomingIds = new Set(
-          incomingProducts.filter((p) => p.id).map((p) => p.id!),
-        );
-
-        // Productos que ya no están en el payload → eliminar
-        const toDelete = existingProducts.filter((p) => !incomingIds.has(p.id));
-        if (toDelete.length > 0) {
-          await productRepository.remove(toDelete);
-        }
-
-        await Promise.all(
-          incomingProducts.map(async (productDto, index) => {
-            const { id: productId, images, ...fields } = productDto;
-
-            if (productId) {
-              // Validar que el producto pertenece a este lote
-              const existing = existingProducts.find((p) => p.id === productId);
-              if (!existing) {
-                throw new NotFoundException(
-                  `Producto con ID ${productId} no encontrado en este lote`,
-                );
-              }
-
-              const imageUrls = images?.length
-                ? await this.normalizeImageUrls(images, index)
-                : existing.imageUrls;
-
-              await productRepository.update(productId, { ...fields, imageUrls });
-            } else {
-              // Sin id → producto nuevo
-              const newProduct = productRepository.create({
-                ...fields,
-                imageUrls: await this.normalizeImageUrls(images ?? [], index),
-                lote,
-                user: lote.user,
-              });
-              await productRepository.save(newProduct);
-            }
-          }),
-        );
-      }
-
-      await queryRunner.commitTransaction();
-
-      return this.loteRepository.findOne({
-        where: { id },
-        relations: ['products'],
-      });
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
+    return this.loteRepository.findOne({ where: { id }, relations: ['products'] });
   }
 
   async updateStatus(id: number, status: LoteStatus) {
@@ -293,88 +170,5 @@ export class LoteService {
       throw new NotFoundException(`Lote con ID ${id} no encontrado`);
     }
     return this.loteRepository.remove(lote);
-  }
-
-  private async normalizeImageUrls(images: string[], productIndex: number): Promise<string[]> {
-    if (images.length === 0) {
-      return [];
-    }
-
-    const normalizedImages = [...images];
-    const base64Images: { value: string; originalIndex: number }[] = [];
-
-    images.forEach((imageData, imageIndex) => {
-      if (HTTP_IMAGE_URL_REGEX.test(imageData)) {
-        normalizedImages[imageIndex] = this.extractPathFromHttpUrl(imageData, productIndex, imageIndex);
-        return;
-      }
-
-      base64Images.push({ value: imageData, originalIndex: imageIndex });
-    });
-
-    if (base64Images.length === 0) {
-      return normalizedImages;
-    }
-
-    const savedBase64ImageUrls = await this.saveBase64Images(
-      base64Images.map((image) => image.value),
-      productIndex,
-    );
-
-    savedBase64ImageUrls.forEach((savedUrl, index) => {
-      normalizedImages[base64Images[index].originalIndex] = savedUrl;
-    });
-
-    return normalizedImages;
-  }
-
-  private extractPathFromHttpUrl(url: string, productIndex: number, imageIndex: number): string {
-    try {
-      const parsedUrl = new URL(url);
-      const pathWithoutLeadingSlash = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`.replace(/^\/+/, '');
-      return pathWithoutLeadingSlash;
-    } catch {
-      throw new BadRequestException(
-        `URL inválida para la imagen ${imageIndex + 1} del producto ${productIndex + 1}`,
-      );
-    }
-  }
-
-  private async saveBase64Images(images: string[], productIndex: number): Promise<string[]> {
-    if (images.length === 0) {
-      return [];
-    }
-
-    const relativePath = 'public/images/products';
-    const targetDir = join(process.cwd(), relativePath);
-    await mkdir(targetDir, { recursive: true });
-
-    return Promise.all(
-      images.map(async (imageData, imageIndex) => {
-        const parsedImage = BASE64_IMAGE_REGEX.exec(imageData);
-
-        if (!parsedImage) {
-          throw new BadRequestException(
-            `Formato base64 inválido para la imagen ${imageIndex + 1} del producto ${productIndex + 1}`,
-          );
-        }
-
-        const mimeType = parsedImage[1];
-        const base64Payload = parsedImage[2];
-        const extension = MIME_TYPE_TO_EXTENSION[mimeType];
-
-        if (!extension) {
-          throw new BadRequestException(
-            `MIME type no permitido para la imagen ${imageIndex + 1} del producto ${productIndex + 1}`,
-          );
-        }
-
-        const fileName = `product-${Date.now()}-${productIndex}-${imageIndex}-${Math.round(Math.random() * 1e9)}.${extension}`;
-        const fullPath = join(targetDir, fileName);
-
-        await writeFile(fullPath, Buffer.from(base64Payload, 'base64'));
-        return relativePath.replace('public/', '') + '/' + fileName;
-      }),
-    );
   }
 }

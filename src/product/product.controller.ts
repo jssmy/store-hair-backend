@@ -1,28 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
-import { ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ProductImagesInterceptor } from './infrastructure/product-images-upload.config';
 import { FindAllProductQueryDto } from './dto/find-all-product-query.dto';
+import { JwtAuthGuard } from 'src/auth/infrastructure/jwt-auth.guard';
+import { CurrentUser } from 'src/auth/infrastructure/current-user.decorator';
+import { AuthUser } from 'src/auth/domain/auth-user.entity';
 
 @ApiTags('Products')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  @UseInterceptors(ProductImagesInterceptor())
   @Post()
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Crear producto', description: 'Crea un nuevo producto. Las imágenes se envían como archivos multipart o en base64.' })
+  @ApiOperation({ summary: 'Crear producto', description: 'Crea un nuevo producto y lo asocia al lote indicado.' })
   @ApiResponse({ status: 201, description: 'Producto creado exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
+  @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
   create(
-    @UploadedFiles() imagenes: Express.Multer.File[],
     @Body() createProductDto: CreateProductDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    console.log(imagenes);
-    return this.productService.create(createProductDto, imagenes.map(file => file.filename));
+    return this.productService.create(createProductDto, user);
   }
 
   @Get()
@@ -42,7 +44,7 @@ export class ProductController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar producto', description: 'Actualiza los campos de un producto existente.' })
+  @ApiOperation({ summary: 'Actualizar producto', description: 'Actualiza los campos de un producto. Si se envían imágenes, reemplazan las existentes.' })
   @ApiParam({ name: 'id', description: 'ID numérico del producto', example: 1 })
   @ApiResponse({ status: 200, description: 'Producto actualizado exitosamente.' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })

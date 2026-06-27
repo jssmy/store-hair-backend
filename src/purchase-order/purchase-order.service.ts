@@ -47,9 +47,9 @@ export class PurchaseOrderService {
         purchaseOrderRepository.create({
           user: { id: authUser.id } as PurchaseOrder['user'],
           supplier: { id: supplier.id } as PurchaseOrder['supplier'],
-          tc_usd: createPurchaseOrderDto.tc_usd,
-          tc_converted_currency: createPurchaseOrderDto.tc_converted_currency,
-          tc_converted_value: createPurchaseOrderDto.tc_converted_value,
+          purchase_currency: createPurchaseOrderDto.purchase_currency,
+          tc_cop_usd: createPurchaseOrderDto.tc_cop_usd,
+          tc_cop_purchase_currency: createPurchaseOrderDto.tc_cop_purchase_currency,
         }),
       );
 
@@ -194,9 +194,9 @@ export class PurchaseOrderService {
         purchaseOrder.supplier = { id: supplier.id } as PurchaseOrder['supplier'];
       }
 
-      if (updatePurchaseOrderDto.tc_usd !== undefined) purchaseOrder.tc_usd = updatePurchaseOrderDto.tc_usd;
-      if (updatePurchaseOrderDto.tc_converted_currency !== undefined) purchaseOrder.tc_converted_currency = updatePurchaseOrderDto.tc_converted_currency;
-      if (updatePurchaseOrderDto.tc_converted_value !== undefined) purchaseOrder.tc_converted_value = updatePurchaseOrderDto.tc_converted_value;
+      if (updatePurchaseOrderDto.purchase_currency !== undefined) purchaseOrder.purchase_currency = updatePurchaseOrderDto.purchase_currency;
+      if (updatePurchaseOrderDto.tc_cop_usd !== undefined) purchaseOrder.tc_cop_usd = updatePurchaseOrderDto.tc_cop_usd;
+      if (updatePurchaseOrderDto.tc_cop_purchase_currency !== undefined) purchaseOrder.tc_cop_purchase_currency = updatePurchaseOrderDto.tc_cop_purchase_currency;
 
       await purchaseOrderRepository.save(purchaseOrder);
 

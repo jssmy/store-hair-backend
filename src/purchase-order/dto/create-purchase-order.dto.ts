@@ -9,22 +9,22 @@ export class CreatePurchaseOrderDto {
   @IsPositive()
   supplierId!: number;
 
-  @ApiPropertyOptional({ example: 4200.5, description: 'Tipo de cambio COP → USD al momento de la orden' })
-  @IsOptional()
-  @IsNumber()
-  @IsPositive()
-  tc_usd?: number;
-
-  @ApiPropertyOptional({ example: 'USD', description: 'Moneda de conversión (ejemplo: USD, EUR)' })
+  @ApiPropertyOptional({ example: 'COP', description: 'Moneda en la que se realiza la compra (PEN, COP, USD, etc.)' })
   @IsOptional()
   @IsString()
-  tc_converted_currency?: string;
+  purchase_currency?: string;
 
-  @ApiPropertyOptional({ example: 250.75, description: 'Valor total de la orden expresado en la moneda de conversión' })
+  @ApiPropertyOptional({ example: 4200.5, description: 'Tipo de cambio COP → USD (cuántos COP equivalen a 1 USD)' })
   @IsOptional()
   @IsNumber()
   @IsPositive()
-  tc_converted_value?: number;
+  tc_cop_usd?: number;
+
+  @ApiPropertyOptional({ example: 3.75, description: 'Tipo de cambio COP → moneda de compra (cuántos COP equivalen a 1 unidad de purchase_currency)' })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  tc_cop_purchase_currency?: number;
 
   @ApiProperty({ type: [CreatePurchaseOrderDetailDto], description: 'Detalle de productos de la orden (mínimo 1)', minItems: 1 })
   @IsArray()

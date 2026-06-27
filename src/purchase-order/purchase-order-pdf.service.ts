@@ -290,22 +290,22 @@ export class PurchaseOrderPdfService {
     let summaryHeight = 20;
 
     // Conversión a USD
-    if (order.tc_usd) {
-      const tcUsd = Number(order.tc_usd);
+    if (order.tc_cop_usd) {
+      const tcUsd = Number(order.tc_cop_usd);
       const usdTotal = totalCop / tcUsd;
       drawSummaryRow(`TC: 1 USD = ${this.formatCOP(tcUsd)}`, '', summaryHeight + 2);
       drawSummaryRow('TOTAL USD', this.formatUSD(usdTotal), summaryHeight + 12, true);
       summaryHeight += 26;
+    }
 
-      // Conversión a moneda destino
-      if (order.tc_converted_currency && order.tc_converted_value) {
-        const tcDest = Number(order.tc_converted_value);
-        const destTotal = usdTotal * tcDest;
-        const cur = order.tc_converted_currency.toUpperCase();
-        drawSummaryRow(`TC: 1 USD = ${tcDest.toFixed(4)} ${cur}`, '', summaryHeight + 2);
-        drawSummaryRow(`TOTAL ${cur}`, this.formatConverted(destTotal, cur), summaryHeight + 12, true);
-        summaryHeight += 26;
-      }
+    // Conversión a moneda de compra
+    if (order.purchase_currency && order.tc_cop_purchase_currency) {
+      const tcPurchase = Number(order.tc_cop_purchase_currency);
+      const purchaseTotal = totalCop / tcPurchase;
+      const cur = order.purchase_currency.toUpperCase();
+      drawSummaryRow(`TC: 1 ${cur} = ${this.formatCOP(tcPurchase)}`, '', summaryHeight + 2);
+      drawSummaryRow(`TOTAL ${cur}`, this.formatConverted(purchaseTotal, cur), summaryHeight + 12, true);
+      summaryHeight += 26;
     }
 
     doc.y = rowY + summaryHeight + 10;

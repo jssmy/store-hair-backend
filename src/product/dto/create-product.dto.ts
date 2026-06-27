@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
+import { IsArray, IsNumber, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
 import { IsBase64Image } from '../validators/is-base64-image.validator';
 
 export class CreateProductDto {
@@ -30,10 +30,17 @@ export class CreateProductDto {
 
   @ApiProperty({
     example: ['data:image/jpeg;base64,/9j/4AAQSkZJRgAB...'],
-    description: 'Array de imágenes codificadas en Base64',
+    description: 'Array de imágenes en Base64 o URLs HTTP',
     type: [String],
+    required: false,
   })
+  @IsOptional()
   @IsArray()
   @IsBase64Image({ each: true })
-  images!: string[];
+  images?: string[];
+
+  @ApiProperty({ example: 1, description: 'ID del lote al que pertenece el producto' })
+  @IsNumber()
+  @IsPositive()
+  loteId!: number;
 }

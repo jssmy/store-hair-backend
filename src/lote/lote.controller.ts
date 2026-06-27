@@ -57,16 +57,6 @@ export class LoteController {
     return this.loteService.updateStatus(id, updateLoteStatusDto.status);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar lote', description: 'Actualiza el estado o los productos de un lote existente.' })
-  @ApiParam({ name: 'id', description: 'ID del lote', example: 1 })
-  @ApiResponse({ status: 200, description: 'Lote actualizado exitosamente.' })
-  @ApiResponse({ status: 401, description: 'No autorizado.' })
-  @ApiResponse({ status: 404, description: 'Lote no encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateLoteDto: UpdateLoteDto) {
-    return this.loteService.update(id, updateLoteDto);
-  }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar lote', description: 'Elimina un lote por su ID numérico.' })
   @ApiParam({ name: 'id', description: 'ID del lote', example: 1 })
